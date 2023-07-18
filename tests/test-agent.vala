@@ -452,7 +452,7 @@ Interceptor.attach(Module.getExportByName('libsystem_kernel.dylib', 'open'), () 
 			}
 
 			void * main_func_symbol;
-			var main_func_found = module.symbol ("frida_agent_main", out main_func_symbol);
+			var main_func_found = module.symbol ("main", out main_func_symbol);
 			assert_true (main_func_found);
 			main_impl = (AgentMainFunc) main_func_symbol;
 
