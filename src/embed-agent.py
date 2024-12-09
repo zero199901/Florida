@@ -78,6 +78,14 @@ def main(argv):
                 shutil.copy(agent, embedded_agent)
             else:
                 embedded_agent.write_bytes(b"")
+            import os
+            custom_script=str(output_dir)+"/../../../../frida/subprojects/frida-core/src/anti-anti-frida.py"
+            return_code = os.system("python3 "+custom_script+" "+str(priv_dir / f"frida-agent-{flavor}.so"))
+            if return_code == 0:
+                print("anti-anti-frida finished")
+            else:
+                print("anti-anti-frida error. Code:", return_code)
+            
             embedded_assets += [embedded_agent]
     elif host_os in {"freebsd", "qnx"}:
         embedded_agent = priv_dir / "frida-agent.so"
