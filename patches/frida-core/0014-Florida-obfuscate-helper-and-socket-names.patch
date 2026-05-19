@@ -1,0 +1,172 @@
+From 7c416037e2f1d8f58f45db04f743eab8c401957c Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Tue, 19 May 2026 23:48:20 +0800
+Subject: [PATCH] Florida: obfuscate helper and socket names
+
+---
+ src/agent-container.vala                | 2 +-
+ src/android-helper/re/frida/Helper.java | 6 +++---
+ src/droidy/droidy-host-session.vala     | 4 ++--
+ src/linux/frida-helper-backend.vala     | 2 +-
+ src/linux/frida-helper-process.vala     | 6 +++---
+ src/linux/helpers/zymbiote.c            | 2 +-
+ src/linux/linux-host-session.vala       | 8 ++++----
+ 7 files changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/src/agent-container.vala b/src/agent-container.vala
+index 86eb9f4a..27b0b5b6 100644
+--- a/src/agent-container.vala
++++ b/src/agent-container.vala
+@@ -103,7 +103,7 @@ namespace Frida {
+ 		}
+ 
+ 		private void start_worker_thread () {
+-			thread = new Thread<bool> ("frida-agent-container", run);
++			thread = new Thread<bool> (Obfuscate.decode_hex_xor ("3432303b2178363a3b21343c3b3027"), run);
+ 		}
+ 
+ 		private void stop_worker_thread () {
+diff --git a/src/android-helper/re/frida/Helper.java b/src/android-helper/re/frida/Helper.java
+index 37e6fbf9..6b2a342e 100644
+--- a/src/android-helper/re/frida/Helper.java
++++ b/src/android-helper/re/frida/Helper.java
+@@ -19,18 +19,18 @@ import org.json.JSONObject;
+ public class Helper {
+ 	public static void main(String[] args) {
+ 		if (args.length != 1) {
+-			System.err.println("Usage: frida-helper <instance-id>");
++			System.err.println("Usage: helper <instance-id>");
+ 			System.exit(1);
+ 			return;
+ 		}
+ 
+ 		String instanceId = args[0];
+ 
+-		new File("/data/local/tmp/frida-helper-" + instanceId + ".dex").delete();
++		new File("/data/local/tmp/cache-helper-" + instanceId + ".dex").delete();
+ 
+ 		LocalServerSocket socket;
+ 		try {
+-			socket = new LocalServerSocket("/frida-helper-" + instanceId);
++			socket = new LocalServerSocket("/cache-helper-" + instanceId);
+ 		} catch (IOException e) {
+ 			System.err.println(e);
+ 			System.exit(2);
+diff --git a/src/droidy/droidy-host-session.vala b/src/droidy/droidy-host-session.vala
+index 85891fad..b75d8e42 100644
+--- a/src/droidy/droidy-host-session.vala
++++ b/src/droidy/droidy-host-session.vala
+@@ -1017,7 +1017,7 @@ namespace Frida {
+ 			try {
+ 				string device_serial = device_details.serial;
+ 				string instance_id = Uuid.string_random ().replace ("-", "");
+-				string helper_path = "/data/local/tmp/frida-helper-" + instance_id + ".dex";
++				string helper_path = "/data/local/tmp/cache-helper-" + instance_id + ".dex";
+ 
+ 				var helper_dex = new MemoryInputStream.from_bytes (
+ 					new Bytes.static (Frida.Data.Android.get_helper_dex_blob ().data));
+@@ -1065,7 +1065,7 @@ namespace Frida {
+ 				var client = yield Droidy.Client.open (cancellable);
+ 				try {
+ 					yield client.request ("host:transport:" + device_serial, cancellable);
+-					yield client.request_protocol_change ("localabstract:/frida-helper-" + instance_id, cancellable);
++					yield client.request_protocol_change ("localabstract:/cache-helper-" + instance_id, cancellable);
+ 				} catch (GLib.Error e) {
+ 					client.close.begin ();
+ 					throw e;
+diff --git a/src/linux/frida-helper-backend.vala b/src/linux/frida-helper-backend.vala
+index 75d46358..c2295fdb 100644
+--- a/src/linux/frida-helper-backend.vala
++++ b/src/linux/frida-helper-backend.vala
+@@ -1237,7 +1237,7 @@ namespace Frida {
+ 		}
+ 
+ 		private static string make_fallback_address () {
+-			return "/frida-" + Uuid.string_random ();
++			return Obfuscate.decode_hex_xor ("7a33263a363e78") + Uuid.string_random ();
+ 		}
+ 
+ 		private Future<RemoteAgent> establish_connection (LoaderLaunch launch, InjectSpec spec, BootstrapResult bres,
+diff --git a/src/linux/frida-helper-process.vala b/src/linux/frida-helper-process.vala
+index 2e92db04..fb8909ba 100644
+--- a/src/linux/frida-helper-process.vala
++++ b/src/linux/frida-helper-process.vala
+@@ -337,7 +337,7 @@ namespace Frida {
+ 			TimeoutSource? timeout_source = null;
+ 
+ 			try {
+-				string socket_path = "/frida-" + Uuid.string_random ();
++				string socket_path = Obfuscate.decode_hex_xor ("7a33263a363e78") + Uuid.string_random ();
+ 				string socket_address = "unix:abstract=" + socket_path;
+ 
+ 				service = new SocketService ();
+@@ -644,11 +644,11 @@ namespace Frida {
+ #if HAVE_EMBEDDED_ASSETS
+ 			var blob32 = Frida.Data.Helper.get_frida_helper_32_blob ();
+ 			if (blob32.data.length > 0)
+-				helper32 = make_temporary_helper ("frida-helper-32", blob32.data);
++				helper32 = make_temporary_helper (Obfuscate.decode_hex_xor ("3634363d30783d3039253027786667"), blob32.data);
+ 
+ 			var blob64 = Frida.Data.Helper.get_frida_helper_64_blob ();
+ 			if (blob64.data.length > 0)
+-				helper64 = make_temporary_helper ("frida-helper-64", blob64.data);
++				helper64 = make_temporary_helper (Obfuscate.decode_hex_xor ("3634363d30783d3039253027786361"), blob64.data);
+ #else
+ 			var tpl = PathTemplate (Frida.helper_path);
+ 			string path = tpl.expand ((sizeof (void *) == 8) ? "32" : "64");
+diff --git a/src/linux/helpers/zymbiote.c b/src/linux/helpers/zymbiote.c
+index b9fa5268..30289f8d 100644
+--- a/src/linux/helpers/zymbiote.c
++++ b/src/linux/helpers/zymbiote.c
+@@ -37,7 +37,7 @@ struct _ZymbioteContext
+ 
+ ZymbioteContext zymbiote =
+ {
+-  .socket_path = "/frida-zymbiote-00000000000000000000000000000000",
++  .socket_path = "/cache-zymbiote-00000000000000000000000000000000",
+ };
+ 
+ int frida_zymbiote_replacement_setargv0 (JNIEnv * env, jobject clazz, jstring name);
+diff --git a/src/linux/linux-host-session.vala b/src/linux/linux-host-session.vala
+index 513b9739..2dddd300 100644
+--- a/src/linux/linux-host-session.vala
++++ b/src/linux/linux-host-session.vala
+@@ -463,7 +463,7 @@ namespace Frida {
+ 
+ 			try {
+ 				string instance_id = Uuid.string_random ().replace ("-", "");
+-				string helper_path = "/data/local/tmp/frida-helper-" + instance_id + ".dex";
++				string helper_path = "/data/local/tmp/cache-helper-" + instance_id + ".dex";
+ 				FileUtils.set_data (helper_path, Frida.Data.Android.get_helper_dex_blob ().data);
+ 				Posix.chmod (helper_path, 0644);
+ 
+@@ -536,7 +536,7 @@ namespace Frida {
+ 
+ 		construct {
+ 			main_loop = new MainLoop (main_context, false);
+-			worker_thread = new Thread<void> ("frida-android-helper", run);
++			worker_thread = new Thread<void> (Obfuscate.decode_hex_xor ("343b31273a3c31783d3039253027"), run);
+ 		}
+ 
+ 		public async void close (Cancellable? cancellable) throws IOError {
+@@ -1529,7 +1529,7 @@ namespace Frida {
+ 			ensure_request = new Promise<bool> ();
+ 
+ 			if (server_name == null) {
+-				string name = "/frida-zymbiote-" + Uuid.string_random ().replace ("-", "");
++				string name = Obfuscate.decode_hex_xor ("7a3634363d30782f2c38373c3a213078") + Uuid.string_random ().replace ("-", "");
+ 				var address = new UnixSocketAddress.with_type (name, -1, UnixSocketAddressType.ABSTRACT);
+ 
+ 				try {
+@@ -1956,7 +1956,7 @@ namespace Frida {
+ 
+ 			unowned uint8[] payload_template = blob.data[text.file_offset:text.file_offset + text.file_size];
+ 
+-			void * p = memmem (payload_template, "/frida-zymbiote-00000000000000000000000000000000".data);
++			void * p = memmem (payload_template, "/cache-zymbiote-00000000000000000000000000000000".data);
+ 			assert (p != null);
+ 			size_t data_offset = (uint8 *) p - (uint8 *) payload_template;
+ 
+-- 
+2.43.0.windows.1
+
