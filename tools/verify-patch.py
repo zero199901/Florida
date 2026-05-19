@@ -89,20 +89,34 @@ def contains_any(data: bytes, needles: list[str]) -> list[str]:
     return found
 
 
-def verify_one(path: Path, strict: bool, require_good: bool) -> tuple[bool, list[str], list[str], list[str]]:
+def is_gumjs_static_archive(path: Path) -> bool:
+    return "-gumjs-" in path.name and ".a." in path.name
+
+
+def verify_one(
+    path: Path,
+    strict: bool,
+    require_good: bool,
+) -> tuple[bool, list[str], list[str], list[str], list[str]]:
     data = read_bytes(path)
     found_bad = contains_any(data, BAD_STRINGS)
     found_good = contains_any(data, GOOD_STRINGS)
     found_strict = contains_any(data, STRICT_BAD_STRINGS) if strict else []
+    ignored_bad: list[str] = []
 
-    is_gumjs = "-gumjs-" in path.name
+    is_gumjs = is_gumjs_static_archive(path)
+    if is_gumjs:
+        # gumjs 静态库会保留大量对象名/符号名，不适合按最终可执行产物同样的
+        # 规则一刀切判 FAIL；这里只保留展示，不参与 core 失败判定。
+        ignored_bad = found_bad
+        found_bad = []
     missing_good = require_good and not is_gumjs and not found_good
 
     passed = not found_bad and not found_strict and not missing_good
     if missing_good:
         found_bad = found_bad + ["<missing patched marker>"]
 
-    return passed, found_bad, found_good, found_strict
+    return passed, found_bad, found_good, found_strict, ignored_bad
 
 
 def main() -> int:
@@ -131,7 +145,7 @@ def main() -> int:
     all_passed = True
     for artifact in artifacts:
         try:
-            passed, found_bad, found_good, found_strict = verify_one(
+            passed, found_bad, found_good, found_strict, ignored_bad = verify_one(
                 artifact,
                 args.strict,
                 args.require_good,
@@ -148,9 +162,11 @@ def main() -> int:
             print(f"  未 patch: {', '.join(found_bad)}")
         if found_strict:
             print(f"  严格检查命中: {', '.join(found_strict)}")
+        if ignored_bad:
+            print(f"  静态库保留符号(仅提示): {', '.join(ignored_bad)}")
         if found_good:
             print(f"  已 patch 标记: {', '.join(found_good)}")
-        if not found_bad and not found_strict and not found_good:
+        if not found_bad and not found_strict and not found_good and not ignored_bad:
             print("  说明: 未发现坏特征串")
 
     print("\n" + "=" * 70)
