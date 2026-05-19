@@ -17,23 +17,117 @@ import lzma
 from pathlib import Path
 
 
-CORE_RULES = [
-    "FridaScriptEngine",
-    "GLib-GIO",
-    "GDBusProxy",
-    "GumScript",
-    "gum-js-loop",
-    "gmain",
-    "gdbus",
-]
-
-STRICT_RULES = [
-    "frida:rpc",
-    "re.frida",
-    "frida-helper",
-    "frida-gadget",
-    "frida-server",
-    "frida-inject",
+RULES = [
+    {
+        "keyword": "FridaScriptEngine",
+        "severity": "fail",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "GLib-GIO",
+        "severity": "fail",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "GDBusProxy",
+        "severity": "fail",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "GumScript",
+        "severity": "fail",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "gum-js-loop",
+        "severity": "fail",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "gmain",
+        "severity": "fail",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "gdbus",
+        "severity": "fail",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "frida-zymbiote",
+        "severity": "fail",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "frida-error-quark",
+        "severity": "fail",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "frida:rpc",
+        "severity": "fail",
+        "sets": {"strict"},
+    },
+    {
+        "keyword": "re.frida",
+        "severity": "fail",
+        "sets": {"strict"},
+    },
+    {
+        "keyword": "frida-helper",
+        "severity": "fail",
+        "sets": {"strict"},
+    },
+    {
+        "keyword": "frida-gadget",
+        "severity": "warn",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "frida-server",
+        "severity": "warn",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "/frida-",
+        "severity": "info",
+        "sets": {"core", "strict"},
+    },
+    {
+        "keyword": "frida-eternal-agent",
+        "severity": "fail",
+        "sets": {"strict"},
+    },
+    {
+        "keyword": "frida-agent-emulated",
+        "severity": "fail",
+        "sets": {"strict"},
+    },
+    {
+        "keyword": "frida-generate-certificate",
+        "severity": "fail",
+        "sets": {"strict"},
+    },
+    {
+        "keyword": "frida-gadget-tcp-",
+        "severity": "fail",
+        "sets": {"strict"},
+    },
+    {
+        "keyword": "frida-gadget-unix",
+        "severity": "fail",
+        "sets": {"strict"},
+    },
+    {
+        "keyword": "frida-agent-container",
+        "severity": "fail",
+        "sets": {"strict"},
+    },
+    {
+        "keyword": "frida-android-helper",
+        "severity": "fail",
+        "sets": {"strict"},
+    },
 ]
 
 
@@ -71,6 +165,14 @@ def parse_args() -> argparse.Namespace:
         help="每个关键字每个文件最多输出多少条命中",
     )
     return parser.parse_args()
+
+
+def select_rules(rule_set: str) -> list[dict]:
+    selected: list[dict] = []
+    for rule in RULES:
+        if rule_set in rule["sets"]:
+            selected.append(rule)
+    return selected
 
 
 def expand_paths(inputs: list[str]) -> list[Path]:
@@ -116,7 +218,7 @@ def make_context(data: bytes, offset: int, length: int, radius: int) -> str:
     return "".join(chr(b) if 32 <= b <= 126 else "." for b in chunk)
 
 
-def scan_file(path: Path, rules: list[str], context: int, limit: int) -> dict:
+def scan_file(path: Path, rules: list[dict], context: int, limit: int) -> dict:
     result = {
         "path": str(path),
         "size": 0,
@@ -127,12 +229,15 @@ def scan_file(path: Path, rules: list[str], context: int, limit: int) -> dict:
         data = read_bytes(path)
         result["size"] = len(data)
         for rule in rules:
-            needle = rule.encode("utf-8")
+            keyword = rule["keyword"]
+            severity = rule["severity"]
+            needle = keyword.encode("utf-8")
             offsets = iter_hits(data, needle, limit)
             for offset in offsets:
                 result["matches"].append(
                     {
-                        "keyword": rule,
+                        "keyword": keyword,
+                        "severity": severity,
                         "offset": offset,
                         "context": make_context(data, offset, len(needle), context),
                     }
@@ -155,7 +260,8 @@ def render_text(results: list[dict]) -> int:
         for match in item["matches"]:
             total += 1
             print(
-                f"  - {match['keyword']} @ 0x{match['offset']:x}: "
+                f"  - [{match['severity'].upper()}] {match['keyword']} "
+                f"@ 0x{match['offset']:x}: "
                 f"{match['context']}"
             )
     return total
@@ -163,12 +269,16 @@ def render_text(results: list[dict]) -> int:
 
 def main() -> int:
     args = parse_args()
-    rules = list(CORE_RULES)
-    if args.rules == "strict":
-        rules.extend(STRICT_RULES)
+    rules = select_rules(args.rules)
     for extra in args.needle:
-        if extra not in rules:
-            rules.append(extra)
+        if all(rule["keyword"] != extra for rule in rules):
+            rules.append(
+                {
+                    "keyword": extra,
+                    "severity": "custom",
+                    "sets": {args.rules},
+                }
+            )
 
     files = expand_paths(args.paths)
     if not files:

@@ -19,12 +19,21 @@ BAD_STRINGS = [
     "gum-js-loop",
     "gmain",
     "gdbus",
+    "frida-zymbiote",
+    "frida-error-quark",
 ]
 
 STRICT_BAD_STRINGS = [
     "frida:rpc",
     "re.frida",
     "frida-helper",
+    "frida-eternal-agent",
+    "frida-agent-emulated",
+    "frida-generate-certificate",
+    "frida-gadget-tcp-",
+    "frida-gadget-unix",
+    "frida-agent-container",
+    "frida-android-helper",
 ]
 
 GOOD_STRINGS = [
@@ -32,6 +41,15 @@ GOOD_STRINGS = [
     "OIG-biLG",
     "yxorPsuBDG",
     "tpircSmuG",
+]
+
+WARN_STRINGS = [
+    "frida-server",
+    "frida-gadget",
+]
+
+INFO_STRINGS = [
+    "/frida-",
 ]
 
 ARTIFACT_PATTERNS = [
@@ -97,11 +115,13 @@ def verify_one(
     path: Path,
     strict: bool,
     require_good: bool,
-) -> tuple[bool, list[str], list[str], list[str], list[str]]:
+) -> tuple[bool, list[str], list[str], list[str], list[str], list[str], list[str]]:
     data = read_bytes(path)
     found_bad = contains_any(data, BAD_STRINGS)
     found_good = contains_any(data, GOOD_STRINGS)
     found_strict = contains_any(data, STRICT_BAD_STRINGS) if strict else []
+    found_warn = contains_any(data, WARN_STRINGS)
+    found_info = contains_any(data, INFO_STRINGS)
     ignored_bad: list[str] = []
 
     is_gumjs = is_gumjs_static_archive(path)
@@ -116,7 +136,15 @@ def verify_one(
     if missing_good:
         found_bad = found_bad + ["<missing patched marker>"]
 
-    return passed, found_bad, found_good, found_strict, ignored_bad
+    return (
+        passed,
+        found_bad,
+        found_good,
+        found_strict,
+        found_warn,
+        found_info,
+        ignored_bad,
+    )
 
 
 def main() -> int:
@@ -145,7 +173,15 @@ def main() -> int:
     all_passed = True
     for artifact in artifacts:
         try:
-            passed, found_bad, found_good, found_strict, ignored_bad = verify_one(
+            (
+                passed,
+                found_bad,
+                found_good,
+                found_strict,
+                found_warn,
+                found_info,
+                ignored_bad,
+            ) = verify_one(
                 artifact,
                 args.strict,
                 args.require_good,
@@ -162,11 +198,22 @@ def main() -> int:
             print(f"  未 patch: {', '.join(found_bad)}")
         if found_strict:
             print(f"  严格检查命中: {', '.join(found_strict)}")
+        if found_warn:
+            print(f"  WARN: {', '.join(found_warn)}")
+        if found_info:
+            print(f"  INFO: {', '.join(found_info)}")
         if ignored_bad:
             print(f"  静态库保留符号(仅提示): {', '.join(ignored_bad)}")
         if found_good:
             print(f"  已 patch 标记: {', '.join(found_good)}")
-        if not found_bad and not found_strict and not found_good and not ignored_bad:
+        if (
+            not found_bad
+            and not found_strict
+            and not found_warn
+            and not found_info
+            and not found_good
+            and not ignored_bad
+        ):
             print("  说明: 未发现坏特征串")
 
     print("\n" + "=" * 70)
