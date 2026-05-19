@@ -1,0 +1,355 @@
+From 20d6c4ba01b4cd3ac48c396a25d431e59b1e26a2 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Wed, 20 May 2026 00:53:16 +0800
+Subject: [PATCH] Florida: scrub rpc and re.frida runtime identifiers
+
+---
+ lib/base/rpc.vala                             |  2 +-
+ lib/base/session.vala                         | 50 +++++++++----------
+ lib/gadget/gadget.vala                        |  2 +-
+ server/server.vala                            |  2 +-
+ src/android-helper/Makefile                   |  2 +-
+ src/android-helper/re/frida/Helper.java       |  2 +-
+ .../re/frida/HelperBackend.java               |  2 +-
+ .../script-runtime/message-dispatcher.ts      |  8 +--
+ src/droidy/droidy-host-session.vala           |  8 +--
+ src/embed-helper.py                           | 10 ++--
+ src/linux/frida-helper-types.vala             |  4 +-
+ 11 files changed, 47 insertions(+), 45 deletions(-)
+
+diff --git a/lib/base/rpc.vala b/lib/base/rpc.vala
+index cd1de1ab..8de30546 100644
+--- a/lib/base/rpc.vala
++++ b/lib/base/rpc.vala
+@@ -12,7 +12,7 @@ namespace Frida {
+ 		}
+ 
+ 		private static string get_rpc_str (bool quoted) {
+-			var result = Obfuscate.decode_hex_xor ("33273c31346f272536");
++			var result = "cache:rpc";
+ 			return quoted ? "\"" + result + "\"" : result;
+ 		}
+ 
+diff --git a/lib/base/session.vala b/lib/base/session.vala
+index feb88aaf..61533525 100644
+--- a/lib/base/session.vala
++++ b/lib/base/session.vala
+@@ -1,5 +1,5 @@
+ namespace Frida {
+-	[DBus (name = "re.frida.HostSession17")]
++	[DBus (name = "re.cache.HostSession17")]
+ 	public interface HostSession : Object {
+ 		public abstract async void ping (uint interval_seconds, Cancellable? cancellable) throws GLib.Error;
+ 
+@@ -43,7 +43,7 @@ namespace Frida {
+ 		public signal void uninjected (InjectorPayloadId id);
+ 	}
+ 
+-	[DBus (name = "re.frida.AgentSessionProvider17")]
++	[DBus (name = "re.cache.AgentSessionProvider17")]
+ 	public interface AgentSessionProvider : Object {
+ 		public abstract async void open (AgentSessionId id, HashTable<string, Variant> options,
+ 			Cancellable? cancellable) throws GLib.Error;
+@@ -58,7 +58,7 @@ namespace Frida {
+ 		public signal void child_gating_changed (uint subscriber_count);
+ 	}
+ 
+-	[DBus (name = "re.frida.AgentSession17")]
++	[DBus (name = "re.cache.AgentSession17")]
+ 	public interface AgentSession : Object {
+ 		public abstract async void close (Cancellable? cancellable) throws GLib.Error;
+ 
+@@ -100,7 +100,7 @@ namespace Frida {
+ 		public signal void candidate_gathering_done ();
+ 	}
+ 
+-	[DBus (name = "re.frida.AgentController17")]
++	[DBus (name = "re.cache.AgentController17")]
+ 	public interface AgentController : Object {
+ #if !WINDOWS
+ 		public abstract async HostChildId prepare_to_fork (uint parent_pid, Cancellable? cancellable, out uint parent_injectee_id,
+@@ -121,7 +121,7 @@ namespace Frida {
+ 			Cancellable? cancellable) throws GLib.Error;
+ 	}
+ 
+-	[DBus (name = "re.frida.AgentMessageSink17")]
++	[DBus (name = "re.cache.AgentMessageSink17")]
+ 	public interface AgentMessageSink : Object {
+ 		public abstract async void post_messages (AgentMessage[] messages, uint batch_id,
+ 			Cancellable? cancellable) throws GLib.Error;
+@@ -749,7 +749,7 @@ namespace Frida {
+ 		}
+ 	}
+ 
+-	[DBus (name = "re.frida.GadgetSession17")]
++	[DBus (name = "re.cache.GadgetSession17")]
+ 	public interface GadgetSession : Object {
+ 		public abstract async void break_and_resume (Cancellable? cancellable) throws GLib.Error;
+ 		public abstract async void break_and_detach (Cancellable? cancellable) throws GLib.Error;
+@@ -762,14 +762,14 @@ namespace Frida {
+ 		PAGE_PLAN,
+ 	}
+ 
+-	[DBus (name = "re.frida.Channel17")]
++	[DBus (name = "re.cache.Channel17")]
+ 	public interface Channel : Object {
+ 		public abstract async void close (Cancellable? cancellable) throws GLib.Error;
+ 		public abstract async void input (uint8[] data, Cancellable? cancellable) throws GLib.Error;
+ 		public signal void output (uint8[] data);
+ 	}
+ 
+-	[DBus (name = "re.frida.ServiceSession17")]
++	[DBus (name = "re.cache.ServiceSession17")]
+ 	public interface ServiceSession : Object {
+ 		public signal void close ();
+ 		public signal void message (Variant message);
+@@ -779,13 +779,13 @@ namespace Frida {
+ 		public abstract async Variant request (Variant parameters, Cancellable? cancellable) throws GLib.Error;
+ 	}
+ 
+-	[DBus (name = "re.frida.TransportBroker17")]
++	[DBus (name = "re.cache.TransportBroker17")]
+ 	public interface TransportBroker : Object {
+ 		public abstract async void open_tcp_transport (AgentSessionId id, Cancellable? cancellable, out uint16 port,
+ 			out string token) throws GLib.Error;
+ 	}
+ 
+-	[DBus (name = "re.frida.PortalSession17")]
++	[DBus (name = "re.cache.PortalSession17")]
+ 	public interface PortalSession : Object {
+ 		public abstract async void join (HostApplicationInfo app, SpawnStartState current_state,
+ 			AgentSessionId[] interrupted_sessions, HashTable<string, Variant> options, Cancellable? cancellable,
+@@ -794,14 +794,14 @@ namespace Frida {
+ 		public signal void kill ();
+ 	}
+ 
+-	[DBus (name = "re.frida.BusSession17")]
++	[DBus (name = "re.cache.BusSession17")]
+ 	public interface BusSession : Object {
+ 		public abstract async void attach (Cancellable? cancellable) throws GLib.Error;
+ 		public abstract async void post (string json, bool has_data, uint8[] data, Cancellable? cancellable) throws GLib.Error;
+ 		public signal void message (string json, bool has_data, uint8[] data);
+ 	}
+ 
+-	[DBus (name = "re.frida.AuthenticationService17")]
++	[DBus (name = "re.cache.AuthenticationService17")]
+ 	public interface AuthenticationService : Object {
+ 		public abstract async string authenticate (string token, Cancellable? cancellable) throws GLib.Error;
+ 	}
+@@ -1047,7 +1047,7 @@ namespace Frida {
+ 		}
+ 	}
+ 
+-	[DBus (name = "re.frida.Error")]
++	[DBus (name = "re.cache.Error")]
+ 	public errordomain Error {
+ 		SERVER_NOT_RUNNING,
+ 		EXECUTABLE_NOT_FOUND,
+@@ -2129,18 +2129,18 @@ namespace Frida {
+ 	}
+ 
+ 	namespace ObjectPath {
+-		public const string HOST_SESSION = "/re/frida/HostSession";
+-		public const string AGENT_SESSION_PROVIDER = "/re/frida/AgentSessionProvider";
+-		public const string AGENT_SESSION = "/re/frida/AgentSession";
+-		public const string AGENT_CONTROLLER = "/re/frida/AgentController";
+-		public const string AGENT_MESSAGE_SINK = "/re/frida/AgentMessageSink";
+-		public const string GADGET_SESSION = "/re/frida/GadgetSession";
+-		public const string CHANNEL = "/re/frida/Channel";
+-		public const string SERVICE = "/re/frida/Service";
+-		public const string TRANSPORT_BROKER = "/re/frida/TransportBroker";
+-		public const string PORTAL_SESSION = "/re/frida/PortalSession";
+-		public const string BUS_SESSION = "/re/frida/BusSession";
+-		public const string AUTHENTICATION_SERVICE = "/re/frida/AuthenticationService";
++		public const string HOST_SESSION = "/re/cache/HostSession";
++		public const string AGENT_SESSION_PROVIDER = "/re/cache/AgentSessionProvider";
++		public const string AGENT_SESSION = "/re/cache/AgentSession";
++		public const string AGENT_CONTROLLER = "/re/cache/AgentController";
++		public const string AGENT_MESSAGE_SINK = "/re/cache/AgentMessageSink";
++		public const string GADGET_SESSION = "/re/cache/GadgetSession";
++		public const string CHANNEL = "/re/cache/Channel";
++		public const string SERVICE = "/re/cache/Service";
++		public const string TRANSPORT_BROKER = "/re/cache/TransportBroker";
++		public const string PORTAL_SESSION = "/re/cache/PortalSession";
++		public const string BUS_SESSION = "/re/cache/BusSession";
++		public const string AUTHENTICATION_SERVICE = "/re/cache/AuthenticationService";
+ 
+ 		public static string for_agent_session (AgentSessionId id) {
+ 			return AGENT_SESSION + "/" + id.handle;
+diff --git a/lib/gadget/gadget.vala b/lib/gadget/gadget.vala
+index 89894102..ac7bfcfd 100644
+--- a/lib/gadget/gadget.vala
++++ b/lib/gadget/gadget.vala
+@@ -1724,7 +1724,7 @@ namespace Frida.Gadget {
+ 				}
+ 
+ 				uint pid = get_process_id ();
+-				string identifier = "re.frida.Gadget";
++				string identifier = "re.cache.Gadget";
+ 				string name = "Gadget";
+ 				var no_parameters = make_parameters_dict ();
+ 				this_app = HostApplicationInfo (identifier, name, pid, no_parameters);
+diff --git a/server/server.vala b/server/server.vala
+index 0d72d595..40d58de6 100644
+--- a/server/server.vala
++++ b/server/server.vala
+@@ -1,7 +1,7 @@
+ namespace Frida.Server {
+ 	private static Application application;
+ 
+-	private const string DEFAULT_DIRECTORY = "re.frida.server";
++	private const string DEFAULT_DIRECTORY = "re.cache.server";
+ 	private static bool output_version = false;
+ 	private static string? device_id = null;
+ 	private static string? listen_address = null;
+diff --git a/src/android-helper/Makefile b/src/android-helper/Makefile
+index 17ebc3e9..7eb8838b 100644
+--- a/src/android-helper/Makefile
++++ b/src/android-helper/Makefile
+@@ -21,4 +21,4 @@ build/frida-helper.jar: re/frida/Helper.java re/frida/HelperBackend.java
+ 		-Xlint:unchecked \
+ 		$^ \
+ 		-d build/java/
+-	jar cfe $@ re.frida.Helper -C build/java/ .
++	jar cfe $@ re.cache.Helper -C build/java/ .
+diff --git a/src/android-helper/re/frida/Helper.java b/src/android-helper/re/frida/Helper.java
+index 6b2a342e..00ebd6b9 100644
+--- a/src/android-helper/re/frida/Helper.java
++++ b/src/android-helper/re/frida/Helper.java
+@@ -1,4 +1,4 @@
+-package re.frida;
++package re.cache;
+ 
+ import android.net.LocalServerSocket;
+ import android.net.LocalSocket;
+diff --git a/src/android-helper/re/frida/HelperBackend.java b/src/android-helper/re/frida/HelperBackend.java
+index 5fe57103..b909a813 100644
+--- a/src/android-helper/re/frida/HelperBackend.java
++++ b/src/android-helper/re/frida/HelperBackend.java
+@@ -1,4 +1,4 @@
+-package re.frida;
++package re.cache;
+ 
+ import android.app.ActivityManager;
+ import android.app.ActivityManager.RunningAppProcessInfo;
+diff --git a/src/barebone/script-runtime/message-dispatcher.ts b/src/barebone/script-runtime/message-dispatcher.ts
+index 13b3ba1a..61e2cd6a 100644
+--- a/src/barebone/script-runtime/message-dispatcher.ts
++++ b/src/barebone/script-runtime/message-dispatcher.ts
+@@ -1,9 +1,11 @@
+ export class MessageDispatcher {
++    static readonly RPC_TAG = "cache:rpc";
++
+     #messages: MessageItem[] = [];
+     #operations = new Map<string, MessageHandler[]>();
+ 
+     dispatch(message: any, data: ArrayBuffer | null) {
+-        if (message instanceof Array && message[0] === "frida:rpc") {
++        if (message instanceof Array && message[0] === MessageDispatcher.RPC_TAG) {
+             this.#handleRpcMessage(message[1], message[2], message.slice(3));
+         } else {
+             this.#messages.push([message, data]);
+@@ -63,9 +65,9 @@ export class MessageDispatcher {
+ 
+     #reply(id: number, type: RpcMessageType, result: any, params: any[] = []) {
+         if (result instanceof ArrayBuffer)
+-            send(["frida:rpc", id, type, {}].concat(params), result);
++            send([MessageDispatcher.RPC_TAG, id, type, {}].concat(params), result);
+         else
+-            send(["frida:rpc", id, type, result].concat(params));
++            send([MessageDispatcher.RPC_TAG, id, type, result].concat(params));
+     }
+ 
+     #dispatchMessages() {
+diff --git a/src/droidy/droidy-host-session.vala b/src/droidy/droidy-host-session.vala
+index b75d8e42..621dd95f 100644
+--- a/src/droidy/droidy-host-session.vala
++++ b/src/droidy/droidy-host-session.vala
+@@ -266,7 +266,7 @@ namespace Frida {
+ 		private Cancellable io_cancellable = new Cancellable ();
+ 
+ 		private const double MIN_SERVER_CHECK_INTERVAL = 5.0;
+-		private const string GADGET_APP_ID = "re.frida.Gadget";
++		private const string GADGET_APP_ID = "re.cache.Gadget";
+ 
+ 		public DroidyHostSession (Droidy.DeviceDetails device_details, HostChannelProvider channel_provider,
+ 				string control_endpoint) {
+@@ -446,7 +446,7 @@ namespace Frida {
+ 				if (opts.has_selected_identifiers ()) {
+ 					gadget_is_selected = false;
+ 					opts.enumerate_selected_identifiers (identifier => {
+-						if (identifier == "re.frida.Gadget")
++						if (identifier == "re.cache.Gadget")
+ 							gadget_is_selected = true;
+ 					});
+ 				}
+@@ -1044,8 +1044,8 @@ namespace Frida {
+ 
+ 					shell.send_command (("CLASSPATH=%s app_process " +
+ 							"/data/local/tmp " +
+-							"--nice-name=re.frida.helper " +
+-							"re.frida.Helper " +
++							"--nice-name=re.cache.helper " +
++							"re.cache.Helper " +
+ 							"%s; " +
+ 							"rm -f %s; " +
+ 							"echo BYE.").printf (helper_path, instance_id, helper_path));
+diff --git a/src/embed-helper.py b/src/embed-helper.py
+index 35c5c9f7..26cc9c5b 100644
+--- a/src/embed-helper.py
++++ b/src/embed-helper.py
+@@ -28,16 +28,16 @@ def main(argv):
+             if helper is None:
+                 continue
+             arch = detect_pefile_arch(helper)
+-            embedded_helper = priv_dir / f"frida-helper-{arch}.exe"
++            embedded_helper = priv_dir / f"cache-helper-{arch}.exe"
+             shutil.copy(helper, embedded_helper)
+             embedded_assets += [embedded_helper]
+             pending_archs.remove(arch)
+         for missing_arch in pending_archs:
+-            embedded_helper = priv_dir / f"frida-helper-{missing_arch}.exe"
++            embedded_helper = priv_dir / f"cache-helper-{missing_arch}.exe"
+             embedded_helper.write_bytes(b"")
+             embedded_assets += [embedded_helper]
+     elif host_os in {"macos", "ios", "watchos", "tvos", "xros"}:
+-        embedded_helper = priv_dir / "frida-helper"
++        embedded_helper = priv_dir / "cache-helper"
+ 
+         if helper_modern is not None and helper_legacy is not None:
+             subprocess.run(lipo + [helper_modern, helper_legacy, "-create", "-output", embedded_helper],
+@@ -51,8 +51,8 @@ def main(argv):
+ 
+         embedded_assets += [embedded_helper]
+     else:
+-        embedded_helper_modern = priv_dir / f"frida-helper-64"
+-        embedded_helper_legacy = priv_dir / f"frida-helper-32"
++        embedded_helper_modern = priv_dir / f"cache-helper-64"
++        embedded_helper_legacy = priv_dir / f"cache-helper-32"
+ 
+         if helper_modern is not None:
+             shutil.copy(helper_modern, embedded_helper_modern)
+diff --git a/src/linux/frida-helper-types.vala b/src/linux/frida-helper-types.vala
+index fee8ae8d..0917f0a3 100644
+--- a/src/linux/frida-helper-types.vala
++++ b/src/linux/frida-helper-types.vala
+@@ -42,7 +42,7 @@ namespace Frida {
+ 		CONTROL_CHANNEL,
+ 	}
+ 
+-	[DBus (name = "re.frida.Helper")]
++	[DBus (name = "re.cache.Helper")]
+ 	public interface LinuxRemoteHelper : Object {
+ 		public signal void output (uint pid, int fd, uint8[] data);
+ 		public signal void uninjected (uint id);
+@@ -88,6 +88,6 @@ namespace Frida {
+ 	}
+ 
+ 	namespace ObjectPath {
+-		public const string HELPER = "/re/frida/Helper";
++		public const string HELPER = "/re/cache/Helper";
+ 	}
+ }
+-- 
+2.43.0.windows.1
+

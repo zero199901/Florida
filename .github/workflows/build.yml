@@ -149,6 +149,32 @@ jobs:
       shell: bash
       run: |
         VERSION="${{ needs.check_version.outputs.FRIDA_VERSION }}"
+        LLVM_STRIP="${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+
+        if [[ ! -x "$LLVM_STRIP" ]]; then
+          echo "llvm-strip not found: $LLVM_STRIP"
+          exit 1
+        fi
+
+        "$LLVM_STRIP" --strip-debug build-android-arm/subprojects/frida-core/server/frida-server
+        "$LLVM_STRIP" --strip-debug build-android-arm64/subprojects/frida-core/server/frida-server
+        "$LLVM_STRIP" --strip-debug build-android-x86/subprojects/frida-core/server/frida-server
+        "$LLVM_STRIP" --strip-debug build-android-x86_64/subprojects/frida-core/server/frida-server
+
+        "$LLVM_STRIP" --strip-debug build-android-arm/subprojects/frida-core/inject/frida-inject
+        "$LLVM_STRIP" --strip-debug build-android-arm64/subprojects/frida-core/inject/frida-inject
+        "$LLVM_STRIP" --strip-debug build-android-x86/subprojects/frida-core/inject/frida-inject
+        "$LLVM_STRIP" --strip-debug build-android-x86_64/subprojects/frida-core/inject/frida-inject
+
+        "$LLVM_STRIP" --strip-debug build-android-arm/subprojects/frida-core/lib/gadget/frida-gadget.so
+        "$LLVM_STRIP" --strip-debug build-android-arm64/subprojects/frida-core/lib/gadget/frida-gadget.so
+        "$LLVM_STRIP" --strip-debug build-android-x86/subprojects/frida-core/lib/gadget/frida-gadget.so
+        "$LLVM_STRIP" --strip-debug build-android-x86_64/subprojects/frida-core/lib/gadget/frida-gadget.so
+
+        "$LLVM_STRIP" --strip-debug build-android-arm/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
+        "$LLVM_STRIP" --strip-debug build-android-arm64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
+        "$LLVM_STRIP" --strip-debug build-android-x86/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
+        "$LLVM_STRIP" --strip-debug build-android-x86_64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
 
         gzip build-android-arm/subprojects/frida-core/server/frida-server
         gzip build-android-arm64/subprojects/frida-core/server/frida-server
@@ -196,6 +222,7 @@ jobs:
       shell: bash
       run: |
         python3 tools/verify-patch.py release-assets
+        python3 tools/verify-patch.py release-assets --strict
 
     - name: Create release and upload assets
       uses: softprops/action-gh-release@v3

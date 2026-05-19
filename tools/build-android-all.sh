@@ -90,8 +90,34 @@ build_one() {
 
 package_artifacts() {
   local version="$1"
+  local llvm_strip="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+
+  if [[ ! -x "${llvm_strip}" ]]; then
+    echo "llvm-strip not found: ${llvm_strip}" >&2
+    exit 1
+  fi
 
   rm -f "${RELEASE_DIR}"/florida-*.gz
+
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-arm/subprojects/frida-core/server/frida-server"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-arm64/subprojects/frida-core/server/frida-server"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-x86/subprojects/frida-core/server/frida-server"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-x86_64/subprojects/frida-core/server/frida-server"
+
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-arm/subprojects/frida-core/inject/frida-inject"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-arm64/subprojects/frida-core/inject/frida-inject"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-x86/subprojects/frida-core/inject/frida-inject"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-x86_64/subprojects/frida-core/inject/frida-inject"
+
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-arm/subprojects/frida-core/lib/gadget/frida-gadget.so"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-arm64/subprojects/frida-core/lib/gadget/frida-gadget.so"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-x86/subprojects/frida-core/lib/gadget/frida-gadget.so"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-x86_64/subprojects/frida-core/lib/gadget/frida-gadget.so"
+
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-arm/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-arm64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-x86/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
+  "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-x86_64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
 
   gzip -c "${WORK_ROOT}/build-android-arm/subprojects/frida-core/server/frida-server" > \
     "${RELEASE_DIR}/florida-server-${version}-android-arm.gz"
@@ -133,6 +159,7 @@ package_artifacts() {
 verify_artifacts() {
   local logfile="${LOG_DIR}/verify-patch.log"
   run_logged "${logfile}" python3 "${REPO_ROOT}/tools/verify-patch.py" "${RELEASE_DIR}"
+  run_logged "${logfile}" python3 "${REPO_ROOT}/tools/verify-patch.py" "${RELEASE_DIR}" --strict
 }
 
 main() {
