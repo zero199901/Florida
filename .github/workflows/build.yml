@@ -28,14 +28,6 @@ jobs:
         id: pullFridaLatestRelease
         run: echo "FRIDA_VERSION=${{ env.FRIDA_VERSION }}" >> $GITHUB_OUTPUT
 
-      - name: Split Repository Name
-        id: split_name
-        run: |
-          repo_name=${{ github.repository }}
-          IFS='/' read -ra repo_parts <<< "$repo_name"
-          echo "owner=${repo_parts[0]}" >> $GITHUB_OUTPUT
-          echo "repo=${repo_parts[1]}" >> $GITHUB_OUTPUT
-
       - name: Check release version
         id: checkReleaseVersion
         uses: actions/github-script@v9
@@ -44,9 +36,9 @@ jobs:
           script: |
             try {
               const releaseVersion = '${{ steps.pullFridaLatestRelease.outputs.FRIDA_VERSION }}'
-              const releaseResponse = await github.repos.getReleaseByTag({
-                owner: '${{ steps.split_name.outputs.owner }}',
-                repo: '${{ steps.split_name.outputs.repo }}',
+              const releaseResponse = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
                 tag: releaseVersion
               });
               const {
@@ -63,7 +55,7 @@ jobs:
                   core.setOutput('ALREADY_RELEASE', '0');
               }
             } catch (e) {
-              if(e.message == 'Not Found'){
+              if (e.status === 404 || e.message == 'Not Found') {
                 core.setOutput('ALREADY_RELEASE', '0');
               }
               else{
