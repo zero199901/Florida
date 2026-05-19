@@ -1,0 +1,62 @@
+From e9f04ffb2d9314c30d1c63c13e92114c5c717310 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Wed, 20 May 2026 01:05:58 +0800
+Subject: [PATCH] Florida: fix helper blob accessors after rename
+
+---
+ src/darwin/frida-helper-process.vala  | 2 +-
+ src/linux/frida-helper-process.vala   | 4 ++--
+ src/windows/frida-helper-process.vala | 6 +++---
+ 3 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/src/darwin/frida-helper-process.vala b/src/darwin/frida-helper-process.vala
+index f604c994..4667e099 100644
+--- a/src/darwin/frida-helper-process.vala
++++ b/src/darwin/frida-helper-process.vala
+@@ -502,7 +502,7 @@ namespace Frida {
+ #if HAVE_EMBEDDED_ASSETS
+ 			FileUtils.chmod (tempdir.path, 0755);
+ 
+-			var blob = Frida.Data.Helper.get_frida_helper_blob ();
++			var blob = Frida.Data.Helper.get_cache_helper_blob ();
+ 			helper = new TemporaryHelperFile (
+ 				new TemporaryFile.from_stream ("frida-helper",
+ 					new MemoryInputStream.from_data (blob.data, null),
+diff --git a/src/linux/frida-helper-process.vala b/src/linux/frida-helper-process.vala
+index fb8909ba..52585ed0 100644
+--- a/src/linux/frida-helper-process.vala
++++ b/src/linux/frida-helper-process.vala
+@@ -642,11 +642,11 @@ namespace Frida {
+ 			this.tempdir = tempdir;
+ 
+ #if HAVE_EMBEDDED_ASSETS
+-			var blob32 = Frida.Data.Helper.get_frida_helper_32_blob ();
++			var blob32 = Frida.Data.Helper.get_cache_helper_32_blob ();
+ 			if (blob32.data.length > 0)
+ 				helper32 = make_temporary_helper (Obfuscate.decode_hex_xor ("3634363d30783d3039253027786667"), blob32.data);
+ 
+-			var blob64 = Frida.Data.Helper.get_frida_helper_64_blob ();
++			var blob64 = Frida.Data.Helper.get_cache_helper_64_blob ();
+ 			if (blob64.data.length > 0)
+ 				helper64 = make_temporary_helper (Obfuscate.decode_hex_xor ("3634363d30783d3039253027786361"), blob64.data);
+ #else
+diff --git a/src/windows/frida-helper-process.vala b/src/windows/frida-helper-process.vala
+index 12ce73ca..0bc6d0bc 100644
+--- a/src/windows/frida-helper-process.vala
++++ b/src/windows/frida-helper-process.vala
+@@ -380,9 +380,9 @@ namespace Frida {
+ 
+ 		public ResourceStore (TemporaryDirectory tempdir) throws Error {
+ #if HAVE_EMBEDDED_ASSETS
+-			var helper_arm64 = add_helper ("arm64", Frida.Data.Helper.get_frida_helper_arm64_exe_blob (), tempdir);
+-			var helper_x86_64 = add_helper ("x86_64", Frida.Data.Helper.get_frida_helper_x86_64_exe_blob (), tempdir);
+-			var helper_x86 = add_helper ("x86", Frida.Data.Helper.get_frida_helper_x86_exe_blob (), tempdir);
++			var helper_arm64 = add_helper ("arm64", Frida.Data.Helper.get_cache_helper_arm64_exe_blob (), tempdir);
++			var helper_x86_64 = add_helper ("x86_64", Frida.Data.Helper.get_cache_helper_x86_64_exe_blob (), tempdir);
++			var helper_x86 = add_helper ("x86", Frida.Data.Helper.get_cache_helper_x86_exe_blob (), tempdir);
+ 
+ 			switch (Gum.Windows.query_native_cpu_type ()) {
+ 				case ARM64:
+-- 
+2.43.0.windows.1
+
