@@ -1,0 +1,103 @@
+From 8d4ee50e8cdc09108f2023daad158e7e8054fb46 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Tue, 19 May 2026 23:41:03 +0800
+Subject: [PATCH] Florida: obfuscate runtime thread names
+
+---
+ lib/agent/agent.vala   | 8 ++++----
+ lib/base/p2p.vala      | 2 +-
+ lib/base/xpc.vala      | 2 +-
+ lib/gadget/gadget.vala | 4 ++--
+ 4 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/lib/agent/agent.vala b/lib/agent/agent.vala
+index 08833696..32119f6f 100644
+--- a/lib/agent/agent.vala
++++ b/lib/agent/agent.vala
+@@ -343,7 +343,7 @@ namespace Frida.Agent {
+ 		}
+ 
+ 		private void keep_running_eternalized () {
+-			agent_gthread = new Thread<bool> ("frida-eternal-agent", () => {
++			agent_gthread = new Thread<bool> (Obfuscate.decode_hex_xor ("33273c313478302130273b3439783432303b21"), () => {
+ 				var ignore_scope = new ThreadIgnoreScope (FRIDA_THREAD);
+ 
+ 				agent_tid = Gum.Process.get_current_thread_id ();
+@@ -539,7 +539,7 @@ namespace Frida.Agent {
+ 					assert_not_reached ();
+ 				}
+ 			} else {
+-				agent_gthread = new Thread<bool> ("frida-eternal-agent", () => {
++				agent_gthread = new Thread<bool> (Obfuscate.decode_hex_xor ("33273c313478302130273b3439783432303b21"), () => {
+ 					var ignore_scope = new ThreadIgnoreScope (FRIDA_THREAD);
+ 					run_after_transition ();
+ 					ignore_scope = null;
+@@ -647,7 +647,7 @@ namespace Frida.Agent {
+ 					assert_not_reached ();
+ 				}
+ 			} else {
+-				agent_gthread = new Thread<bool> ("frida-eternal-agent", () => {
++				agent_gthread = new Thread<bool> (Obfuscate.decode_hex_xor ("33273c313478302130273b3439783432303b21"), () => {
+ 					var ignore_scope = new ThreadIgnoreScope (FRIDA_THREAD);
+ 					run_after_transition ();
+ 					ignore_scope = null;
+@@ -1409,7 +1409,7 @@ namespace Frida.Agent {
+ 
+ 				emulated_bridge_state = new BridgeState (parameters.str);
+ 
+-				emulated_worker = new Thread<void> ("frida-agent-emulated", run_emulated_agent);
++				emulated_worker = new Thread<void> (Obfuscate.decode_hex_xor ("33273c3134783432303b21783038203934213031"), run_emulated_agent);
+ 
+ 				var connection = yield new DBusConnection (stream, ServerGuid.HOST_SESSION_SERVICE,
+ 					AUTHENTICATION_SERVER | AUTHENTICATION_ALLOW_ANONYMOUS, null, cancellable);
+diff --git a/lib/base/p2p.vala b/lib/base/p2p.vala
+index abe5255d..c4a22480 100644
+--- a/lib/base/p2p.vala
++++ b/lib/base/p2p.vala
+@@ -889,7 +889,7 @@ namespace Frida {
+ 		string? result_cert_pem = null;
+ 		string? result_key_pem = null;
+ 
+-		new Thread<bool> ("frida-generate-certificate", () => {
++		new Thread<bool> (Obfuscate.decode_hex_xor ("33273c31347832303b302734213078363027213c333c36342130"), () => {
+ 			uint8[] local_cert_der;
+ 			string local_cert_pem;
+ 			string local_key_pem;
+diff --git a/lib/base/xpc.vala b/lib/base/xpc.vala
+index 8e7e4836..7a1079e3 100644
+--- a/lib/base/xpc.vala
++++ b/lib/base/xpc.vala
+@@ -243,7 +243,7 @@ namespace Frida {
+ 				description = description[:description.length - 1];
+ 
+ 			throw (Error) new GLib.Error.literal (
+-				Quark.from_string ("frida-error-quark"),
++				Quark.from_string (Obfuscate.decode_hex_xor ("33273c3134783027273a2778242034273e")),
+ 				translate_error (domain, code, description),
+ 				description);
+ 		}
+diff --git a/lib/gadget/gadget.vala b/lib/gadget/gadget.vala
+index 230284c7..89894102 100644
+--- a/lib/gadget/gadget.vala
++++ b/lib/gadget/gadget.vala
+@@ -580,7 +580,7 @@ namespace Frida.Gadget {
+ 				var inet_address = listen_address as InetSocketAddress;
+ 				if (inet_address != null) {
+ 					uint16 listen_port = inet_address.get_port ();
+-					Environment.set_thread_name ("frida-gadget-tcp-%u".printf (listen_port));
++					Environment.set_thread_name ("%s%u".printf (Obfuscate.decode_hex_xor ("33273c3134783234313230217821362578"), listen_port));
+ 					if (request != null) {
+ 						request.set_value (listen_port);
+ 					} else {
+@@ -591,7 +591,7 @@ namespace Frida.Gadget {
+ 				} else {
+ #if !WINDOWS
+ 					var unix_address = (UnixSocketAddress) listen_address;
+-					Environment.set_thread_name ("frida-gadget-unix");
++					Environment.set_thread_name (Obfuscate.decode_hex_xor ("33273c31347832343132302178203b3c2d"));
+ 					if (request != null) {
+ 						request.set_value (0);
+ 					} else {
+-- 
+2.43.0.windows.1
+
