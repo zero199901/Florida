@@ -1,0 +1,61 @@
+From c19ce04a4a2390af429fd1a05b4a12b802b15a42 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Wed, 20 May 2026 01:28:13 +0800
+Subject: [PATCH] Florida: patch raw rpc and helper strings in post-process
+
+---
+ src/anti-anti-frida.py | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/src/anti-anti-frida.py b/src/anti-anti-frida.py
+index 2505c865..cf254b9f 100644
+--- a/src/anti-anti-frida.py
++++ b/src/anti-anti-frida.py
+@@ -2,6 +2,7 @@ import lief
+ import random
+ import subprocess
+ import sys
++from pathlib import Path
+ 
+ 
+ RANDOM_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+@@ -11,6 +12,10 @@ THREAD_PATCHES = [
+     ("gmain", 5),
+     ("gdbus", 5),
+ ]
++RAW_REPLACEMENTS = [
++    (b"frida:rpc", b"cache:rpc"),
++    (b"frida-helper", b"cache-helper"),
++]
+ 
+ 
+ def log_color(msg):
+@@ -62,6 +67,17 @@ def patch_thread_names(input_file):
+         patch_thread_name(input_file, source, length)
+ 
+ 
++def patch_raw_strings(input_file):
++    path = Path(input_file)
++    data = path.read_bytes()
++    patched = data
++    for source, target in RAW_REPLACEMENTS:
++        patched = patched.replace(source, target)
++    if patched != data:
++        log_color("[*] Patch raw string replacements")
++        path.write_bytes(patched)
++
++
+ def main(argv):
+     input_file = argv[1]
+     log_color(f"[*] Patch frida-agent: {input_file}")
+@@ -73,6 +89,7 @@ def main(argv):
+     patch_symbols(binary)
+     patch_rodata_strings(binary)
+     binary.write(input_file)
++    patch_raw_strings(input_file)
+     patch_thread_names(input_file)
+     log_color("[*] Patch Finish")
+     return 0
+-- 
+2.43.0.windows.1
+

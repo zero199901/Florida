@@ -1,0 +1,75 @@
+From b54e962e9db52dd0d745336fccadfbaf18af5273 Mon Sep 17 00:00:00 2001
+From: Your Name <your.email@example.com>
+Date: Wed, 20 May 2026 01:28:13 +0800
+Subject: [PATCH] Florida: scrub gumjs rpc tag
+
+---
+ bindings/gumjs/runtime/message-dispatcher.js | 9 +++++----
+ bindings/gumjs/runtime/worker.js             | 5 +++--
+ 2 files changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/bindings/gumjs/runtime/message-dispatcher.js b/bindings/gumjs/runtime/message-dispatcher.js
+index 50afbb71..894f8105 100644
+--- a/bindings/gumjs/runtime/message-dispatcher.js
++++ b/bindings/gumjs/runtime/message-dispatcher.js
+@@ -1,4 +1,5 @@
+ export function MessageDispatcher() {
++  const RPC_TAG = 'cache:rpc';
+   const messages = [];
+   const operations = {};
+ 
+@@ -21,7 +22,7 @@ export function MessageDispatcher() {
+ 
+   function handleMessage(rawMessage, data) {
+     const message = JSON.parse(rawMessage);
+-    if (message instanceof Array && message[0] === 'frida:rpc') {
++    if (message instanceof Array && message[0] === RPC_TAG) {
+       handleRpcMessage(message[1], message[2], message.slice(3), data);
+     } else {
+       messages.push([message, data]);
+@@ -66,11 +67,11 @@ export function MessageDispatcher() {
+   function reply(id, type, result, params = []) {
+     if (Array.isArray(result) && result.length === 2 && result[1] instanceof ArrayBuffer) {
+       const [value, data] = result;
+-      send(['frida:rpc', id, type, undefined, value, ...params], data);
++      send([RPC_TAG, id, type, undefined, value, ...params], data);
+     } else if (result instanceof ArrayBuffer) {
+-      send(['frida:rpc', id, type, undefined, ...params], result);
++      send([RPC_TAG, id, type, undefined, ...params], result);
+     } else {
+-      send(['frida:rpc', id, type, result, ...params]);
++      send([RPC_TAG, id, type, result, ...params]);
+     }
+   }
+ 
+diff --git a/bindings/gumjs/runtime/worker.js b/bindings/gumjs/runtime/worker.js
+index 242d639b..9c57f371 100644
+--- a/bindings/gumjs/runtime/worker.js
++++ b/bindings/gumjs/runtime/worker.js
+@@ -1,4 +1,5 @@
+ export class Worker {
++  static RPC_TAG = 'cache:rpc';
+   _pendingRequests = new Map();
+   _nextRequestId = 1;
+ 
+@@ -28,7 +29,7 @@ export class Worker {
+ 
+     const {payload} = message;
+ 
+-    if (Array.isArray(payload) && payload[0] === 'frida:rpc') {
++    if (Array.isArray(payload) && payload[0] === Worker.RPC_TAG) {
+       const [, id, operation, ...params] = payload;
+       this._onRpcMessage(id, operation, params, data);
+       return;
+@@ -50,7 +51,7 @@ export class Worker {
+           reject(error);
+       });
+ 
+-      this.post(['frida:rpc', id, operation].concat(params));
++      this.post([Worker.RPC_TAG, id, operation].concat(params));
+     });
+   }
+ 
+-- 
+2.43.0.windows.1
+
