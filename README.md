@@ -35,6 +35,23 @@ python3 tools/scan-frida-signatures.py release-assets --rules core
 python3 tools/scan-frida-signatures.py release-assets --rules strict
 ```
 
+### Local Android build
+
+```bash
+export ANDROID_NDK_ROOT=/path/to/android-ndk
+bash tools/build-android-all.sh
+```
+
+默认输出：
+
+- `release-assets-local/`
+- `logs/`
+
+可选环境变量：
+
+- `FRIDA_VERSION=17.9.10`
+- `WORK_ROOT=/tmp/florida-build`
+
 ## References
 
 - [https://github.com/hluwa/Patchs](https://github.com/hluwa/Patchs)

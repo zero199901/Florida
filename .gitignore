@@ -1,3 +1,6 @@
 .DS_Store
 __pycache__/
 *.pyc
+.work-local/
+release-assets-local/
+logs/
