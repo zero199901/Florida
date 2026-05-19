@@ -12,6 +12,8 @@ on:
     paths:
       - ".github/workflows/build.yml"
       - "patches/**"
+      - "tools/**"
+      - "README.md"
 
 permissions:
   contents: write
@@ -142,7 +144,7 @@ jobs:
           make
           cd ..
         done
-    
+
     - name: package build result for Android
       shell: bash
       run: |
@@ -189,6 +191,11 @@ jobs:
         cp build-android-arm64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a.gz release-assets/florida-gumjs-${VERSION}-android-arm64.a.gz
         cp build-android-x86/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a.gz release-assets/florida-gumjs-${VERSION}-android-x86.a.gz
         cp build-android-x86_64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a.gz release-assets/florida-gumjs-${VERSION}-android-x86_64.a.gz
+
+    - name: verify release assets
+      shell: bash
+      run: |
+        python3 tools/verify-patch.py release-assets
 
     - name: Create release and upload assets
       uses: softprops/action-gh-release@v3

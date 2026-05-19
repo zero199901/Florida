@@ -1,0 +1,98 @@
+From 87358d05e43041574026c3e676d545aeed12a353 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Tue, 19 May 2026 23:21:15 +0800
+Subject: [PATCH] Florida: obfuscate rpc string
+
+---
+ lib/base/meson.build    |  1 +
+ lib/base/obfuscate.vala | 17 +++++++++++++++++
+ lib/base/rpc.vala       | 16 ++++++----------
+ 3 files changed, 24 insertions(+), 10 deletions(-)
+ create mode 100644 lib/base/obfuscate.vala
+
+diff --git a/lib/base/meson.build b/lib/base/meson.build
+index 10eb9201..ca7bb742 100644
+--- a/lib/base/meson.build
++++ b/lib/base/meson.build
+@@ -5,6 +5,7 @@ base_sources = [
+   'channel.vala',
+   'service.vala',
+   'stream.vala',
++  'obfuscate.vala',
+   'rpc.vala',
+   'p2p.vala',
+   'p2p-glue.c',
+diff --git a/lib/base/obfuscate.vala b/lib/base/obfuscate.vala
+new file mode 100644
+index 00000000..77649b10
+--- /dev/null
++++ b/lib/base/obfuscate.vala
+@@ -0,0 +1,17 @@
++namespace Frida {
++	namespace Obfuscate {
++		private const uint8 XOR_KEY = 0x55;
++
++		public static string decode_hex_xor (string hex) {
++			var len = hex.length / 2;
++			var sb = new StringBuilder.sized (len);
++			for (var i = 0; i != len; i++) {
++				int64 val;
++				int64.try_parse (hex.substring (i * 2, 2), out val, null, 16);
++				var b = (uint8) val;
++				sb.append_c ((char) (b ^ XOR_KEY));
++			}
++			return sb.str;
++		}
++	}
++}
+diff --git a/lib/base/rpc.vala b/lib/base/rpc.vala
+index 72efba91..cd1de1ab 100644
+--- a/lib/base/rpc.vala
++++ b/lib/base/rpc.vala
+@@ -11,13 +11,9 @@ namespace Frida {
+ 			Object (peer: peer);
+ 		}
+ 
+-		public string getRpcStr(bool quote){
+-			string result = (string) GLib.Base64.decode((string) GLib.Base64.decode("Wm5KcFpHRTZjbkJq"));
+-			if(quote){
+-				return "\"" + result + "\"";
+-			}else{
+-				return result;
+-			}
++		private static string get_rpc_str (bool quoted) {
++			var result = Obfuscate.decode_hex_xor ("33273c31346f272536");
++			return quoted ? "\"" + result + "\"" : result;
+ 		}
+ 
+ 		public async Json.Node call (string method, Json.Node[] args, Bytes? data, Cancellable? cancellable) throws Error, IOError {
+@@ -26,7 +22,7 @@ namespace Frida {
+ 			var request = new Json.Builder ();
+ 			request
+ 				.begin_array ()
+-				.add_string_value (getRpcStr(false))
++				.add_string_value (get_rpc_str (false))
+ 				.add_string_value (request_id)
+ 				.add_string_value ("call")
+ 				.add_string_value (method)
+@@ -79,7 +75,7 @@ namespace Frida {
+ 		}
+ 
+ 		public bool try_handle_message (string json) {
+-			if (json.index_of (getRpcStr(true)) == -1)
++			if (json.index_of (get_rpc_str (true)) == -1)
+ 				return false;
+ 
+ 			var parser = new Json.Parser ();
+@@ -108,7 +104,7 @@ namespace Frida {
+ 				return false;
+ 
+ 			string? type = rpc_message.get_element (0).get_string ();
+-			if (type == null || type != getRpcStr(false))
++			if (type == null || type != get_rpc_str (false))
+ 				return false;
+ 
+ 			var request_id_value = rpc_message.get_element (1);
+-- 
+2.43.0.windows.1
+

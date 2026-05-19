@@ -1,0 +1,169 @@
+From aeb7b9c9c550512494701bb1feeb34149302de4b Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Tue, 19 May 2026 23:37:23 +0800
+Subject: [PATCH] Florida: unify post-process hook
+
+---
+ src/anti-anti-frida.py | 75 ++++++++++++++++++++++++++----------------
+ src/embed-agent.py     |  9 +----
+ tools/post-process.py  |  8 ++++-
+ 3 files changed, 54 insertions(+), 38 deletions(-)
+
+diff --git a/src/anti-anti-frida.py b/src/anti-anti-frida.py
+index 5d15f062..2505c865 100644
+--- a/src/anti-anti-frida.py
++++ b/src/anti-anti-frida.py
+@@ -1,41 +1,43 @@
+ import lief
+-import sys
+ import random
+-import os
++import subprocess
++import sys
++
++
++RANDOM_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
++PATCH_STRINGS = ["FridaScriptEngine", "GLib-GIO", "GDBusProxy", "GumScript"]
++THREAD_PATCHES = [
++    ("gum-js-loop", 11),
++    ("gmain", 5),
++    ("gdbus", 5),
++]
+ 
+ 
+ def log_color(msg):
+     print(f"\033[1;31;40m{msg}\033[0m")
+ 
+ 
+-if __name__ == "__main__":
+-    input_file = sys.argv[1]
+-    random_charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+-    log_color(f"[*] Patch frida-agent: {input_file}")
+-    binary = lief.parse(input_file)
++def random_token(length):
++    return "".join(random.sample(RANDOM_CHARSET, length))
+ 
+-    if not binary:
+-        log_color("[*] Not elf, exit")
+-        exit()
+ 
+-    random_name = "".join(random.sample(random_charset, 5))
++def patch_symbols(binary):
++    random_name = random_token(5)
+     log_color(f"[*] Patch `frida` to `{random_name}`")
+-
+     for symbol in binary.symbols:
+         if symbol.name == "frida_agent_main":
+             symbol.name = "main"
+-
+         if "frida" in symbol.name:
+             symbol.name = symbol.name.replace("frida", random_name)
+-
+         if "FRIDA" in symbol.name:
+             symbol.name = symbol.name.replace("FRIDA", random_name)
+ 
+-    all_patch_string = ["FridaScriptEngine", "GLib-GIO", "GDBusProxy", "GumScript"]
++
++def patch_rodata_strings(binary):
+     for section in binary.sections:
+         if section.name != ".rodata":
+             continue
+-        for patch_str in all_patch_string:
++        for patch_str in PATCH_STRINGS:
+             addr_all = section.search_all(patch_str)
+             for addr in addr_all:
+                 patch = [ord(n) for n in list(patch_str)[::-1]]
+@@ -45,21 +47,36 @@ if __name__ == "__main__":
+                 )
+                 binary.patch_address(section.file_offset + addr, patch)
+ 
+-    binary.write(input_file)
+ 
+-    # thread_gum_js_loop
+-    random_name = "".join(random.sample(random_charset, 11))
+-    log_color(f"[*] Patch `gum-js-loop` to `{random_name}`")
+-    os.system(f"sed -b -i s/gum-js-loop/{random_name}/g {input_file}")
++def patch_thread_name(input_file, source, length):
++    random_name = random_token(length)
++    log_color(f"[*] Patch `{source}` to `{random_name}`")
++    subprocess.run(
++        ["sed", "-b", "-i", f"s/{source}/{random_name}/g", input_file],
++        check=True,
++    )
++
+ 
+-    # thread_gmain
+-    random_name = "".join(random.sample(random_charset, 5))
+-    log_color(f"[*] Patch `gmain` to `{random_name}`")
+-    os.system(f"sed -b -i s/gmain/{random_name}/g {input_file}")
++def patch_thread_names(input_file):
++    for source, length in THREAD_PATCHES:
++        patch_thread_name(input_file, source, length)
+ 
+-    # thread_gdbus
+-    random_name = "".join(random.sample(random_charset, 5))
+-    log_color(f"[*] Patch `gdbus` to `{random_name}`")
+-    os.system(f"sed -b -i s/gdbus/{random_name}/g {input_file}")
+ 
++def main(argv):
++    input_file = argv[1]
++    log_color(f"[*] Patch frida-agent: {input_file}")
++    binary = lief.parse(input_file)
++    if not binary:
++        log_color("[*] Not elf, exit")
++        return 0
++
++    patch_symbols(binary)
++    patch_rodata_strings(binary)
++    binary.write(input_file)
++    patch_thread_names(input_file)
+     log_color("[*] Patch Finish")
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main(sys.argv))
+diff --git a/src/embed-agent.py b/src/embed-agent.py
+index 29d5bb5b..ff8583fb 100644
+--- a/src/embed-agent.py
++++ b/src/embed-agent.py
+@@ -78,14 +78,7 @@ def main(argv):
+                 shutil.copy(agent, embedded_agent)
+             else:
+                 embedded_agent.write_bytes(b"")
+-            import os
+-            custom_script=str(output_dir)+"/../../../../frida/subprojects/frida-core/src/anti-anti-frida.py"
+-            return_code = os.system("python3 "+custom_script+" "+str(priv_dir / f"frida-agent-{flavor}.so"))
+-            if return_code == 0:
+-                print("anti-anti-frida finished")
+-            else:
+-                print("anti-anti-frida error. Code:", return_code)
+-            
++            # Unified post-processing runs in tools/post-process.py; avoid double patching here.
+             embedded_assets += [embedded_agent]
+     elif host_os in {"freebsd", "qnx"}:
+         embedded_agent = priv_dir / "frida-agent.so"
+diff --git a/tools/post-process.py b/tools/post-process.py
+index 4d0cd49f..9b66bbf4 100644
+--- a/tools/post-process.py
++++ b/tools/post-process.py
+@@ -67,9 +67,15 @@ def main(argv):
+             api_level = 19 if host_abi in {"x86", "arm"} else 21
+             subprocess.run(termux_elf_cleaner + ["--api-level", str(api_level), "--quiet", intermediate_path],
+                            **run_kwargs)
++
++        if host_os in {"linux", "android"} and kind in {"shared-library", "executable"}:
++            anti_anti_frida = Path(__file__).resolve().parent.parent / "src" / "anti-anti-frida.py"
++            if anti_anti_frida.exists():
++                subprocess.run([sys.executable, str(anti_anti_frida), str(intermediate_path)], check=True)
+     except subprocess.CalledProcessError as e:
+         print(e, file=sys.stderr)
+-        print("Output:\n\t| " + "\n\t| ".join(e.output.strip().split("\n")), file=sys.stderr)
++        if getattr(e, "output", None):
++            print("Output:\n\t| " + "\n\t| ".join(e.output.strip().split("\n")), file=sys.stderr)
+         sys.exit(1)
+ 
+     shutil.move(intermediate_path, output_path)
+-- 
+2.43.0.windows.1
+
