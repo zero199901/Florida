@@ -1,5 +1,8 @@
 name: Florida
 
+env:
+  FRIDA_VERSION: "17.9.10"
+
 on:
   schedule:
     - cron: "0 9/12 * * *"
@@ -20,18 +23,7 @@ jobs:
     steps:
       - name: Pull Frida Latest Release
         id: pullFridaLatestRelease
-        uses: actions/github-script@v3
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            const releaseResponse = await github.repos.getLatestRelease({
-              owner: 'frida',
-              repo: 'frida',
-            })
-            const {
-              data: { tag_name: ver }
-            } = releaseResponse;
-            core.setOutput('FRIDA_VERSION', ver);
+        run: echo "FRIDA_VERSION=${{ env.FRIDA_VERSION }}" >> $GITHUB_OUTPUT
 
       - name: Split Repository Name
         id: split_name
@@ -147,6 +139,8 @@ jobs:
         
         git clone --recurse-submodules https://github.com/frida/frida
         cd frida
+        git checkout "${{ needs.check_version.outputs.FRIDA_VERSION }}"
+        git submodule update --init --recursive
         for path in ../patches/*
         do
           name=$(basename $path)
