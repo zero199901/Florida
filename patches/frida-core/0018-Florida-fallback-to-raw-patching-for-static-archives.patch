@@ -19,7 +19,7 @@ index cf254b9f..d4f89ed1 100644
      (b"/frida-", b"/cache-"),
      (b"Frida", b"Cache"),
      (b"FRIDA", b"CACHE"),
-@@ -83,7 +84,11 @@ def main(argv):
+@@ -83,7 +84,10 @@ def main(argv):
      log_color(f"[*] Patch frida-agent: {input_file}")
      binary = lief.parse(input_file)
      if not binary:
@@ -29,7 +29,7 @@ index cf254b9f..d4f89ed1 100644
 +        patch_thread_names(input_file)
 +        log_color("[*] Patch Finish")
          return 0
- 
+
      patch_symbols(binary)
 -- 
 2.43.0.windows.1
