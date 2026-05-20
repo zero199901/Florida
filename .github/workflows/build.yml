@@ -265,12 +265,12 @@ jobs:
         ln -s ../../frida-core frida/subprojects/frida-python/subprojects/frida-core
 
         pushd frida/subprojects/frida-python
-        python3 -m pip wheel . --no-deps --wheel-dir ../../../release-assets
+        python3 -m pip wheel . --no-deps --no-build-isolation --wheel-dir ../../../release-assets
         popd
 
         pushd frida/subprojects/frida-tools
         make
-        python3 -m pip wheel . --no-deps --wheel-dir ../../../release-assets
+        python3 -m pip wheel . --no-deps --no-build-isolation --wheel-dir ../../../release-assets
         popd
 
     - name: smoke test patched client wheels
