@@ -1,0 +1,38 @@
+From 1dd30f9f8aeb758a8e1b5ea447f8d7f923c85087 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Wed, 20 May 2026 21:58:00 +0800
+Subject: [PATCH] Florida: fix android helper backend lookup
+
+---
+ src/linux/linux-host-session.vala | 2 +-
+ src/meson.build                   | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/linux/linux-host-session.vala b/src/linux/linux-host-session.vala
+index 2dddd300..ad3525b8 100644
+--- a/src/linux/linux-host-session.vala
++++ b/src/linux/linux-host-session.vala
+@@ -719,7 +719,7 @@ namespace Frida {
+ 
+ 			(*env)->push_local_frame (env, 5);
+ 			try {
+-				var backend_class = (*env)->find_class (env, "re/frida/HelperBackend");
++				var backend_class = (*env)->find_class (env, "re/cache/HelperBackend");
+ 				assert (backend_class != null);
+ 
+ 				var ctor = (*env)->get_method_id (env, backend_class, "<init>", "()V");
+diff --git a/src/meson.build b/src/meson.build
+index 439e5bf8..7fadf584 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -64,7 +64,7 @@ if host_os == 'android' or have_droidy_backend
+ endif
+ 
+ if have_local_backend
+-  post_process_helper = post_process + ['executable', 're.frida.Helper']
++  post_process_helper = post_process + ['executable', 're.cache.Helper']
+ 
+   embed_helper = [
+     python,
+-- 
+2.43.0.windows.1
