@@ -26,7 +26,7 @@ index cd1de1ab..8de30546 100644
  
  		private static string get_rpc_str (bool quoted) {
 -			var result = Obfuscate.decode_hex_xor ("33273c31346f272536");
-+			var result = "cache:rpc";
++			var result = Obfuscate.decode_hex_xor ("33273c31346f272536");
  			return quoted ? "\"" + result + "\"" : result;
  		}
  
@@ -37,7 +37,7 @@ index feb88aaf..61533525 100644
 @@ -1,5 +1,5 @@
  namespace Frida {
 -	[DBus (name = "re.frida.HostSession17")]
-+	[DBus (name = "re.cache.HostSession17")]
++	[DBus (name = "re." + "frida.HostSession17")]
  	public interface HostSession : Object {
  		public abstract async void ping (uint interval_seconds, Cancellable? cancellable) throws GLib.Error;
  
@@ -46,7 +46,7 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.AgentSessionProvider17")]
-+	[DBus (name = "re.cache.AgentSessionProvider17")]
++	[DBus (name = "re." + "frida.AgentSessionProvider17")]
  	public interface AgentSessionProvider : Object {
  		public abstract async void open (AgentSessionId id, HashTable<string, Variant> options,
  			Cancellable? cancellable) throws GLib.Error;
@@ -55,7 +55,7 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.AgentSession17")]
-+	[DBus (name = "re.cache.AgentSession17")]
++	[DBus (name = "re." + "frida.AgentSession17")]
  	public interface AgentSession : Object {
  		public abstract async void close (Cancellable? cancellable) throws GLib.Error;
  
@@ -64,7 +64,7 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.AgentController17")]
-+	[DBus (name = "re.cache.AgentController17")]
++	[DBus (name = "re." + "frida.AgentController17")]
  	public interface AgentController : Object {
  #if !WINDOWS
  		public abstract async HostChildId prepare_to_fork (uint parent_pid, Cancellable? cancellable, out uint parent_injectee_id,
@@ -73,7 +73,7 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.AgentMessageSink17")]
-+	[DBus (name = "re.cache.AgentMessageSink17")]
++	[DBus (name = "re." + "frida.AgentMessageSink17")]
  	public interface AgentMessageSink : Object {
  		public abstract async void post_messages (AgentMessage[] messages, uint batch_id,
  			Cancellable? cancellable) throws GLib.Error;
@@ -82,7 +82,7 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.GadgetSession17")]
-+	[DBus (name = "re.cache.GadgetSession17")]
++	[DBus (name = "re." + "frida.GadgetSession17")]
  	public interface GadgetSession : Object {
  		public abstract async void break_and_resume (Cancellable? cancellable) throws GLib.Error;
  		public abstract async void break_and_detach (Cancellable? cancellable) throws GLib.Error;
@@ -91,7 +91,7 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.Channel17")]
-+	[DBus (name = "re.cache.Channel17")]
++	[DBus (name = "re." + "frida.Channel17")]
  	public interface Channel : Object {
  		public abstract async void close (Cancellable? cancellable) throws GLib.Error;
  		public abstract async void input (uint8[] data, Cancellable? cancellable) throws GLib.Error;
@@ -99,7 +99,7 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.ServiceSession17")]
-+	[DBus (name = "re.cache.ServiceSession17")]
++	[DBus (name = "re." + "frida.ServiceSession17")]
  	public interface ServiceSession : Object {
  		public signal void close ();
  		public signal void message (Variant message);
@@ -108,14 +108,14 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.TransportBroker17")]
-+	[DBus (name = "re.cache.TransportBroker17")]
++	[DBus (name = "re." + "frida.TransportBroker17")]
  	public interface TransportBroker : Object {
  		public abstract async void open_tcp_transport (AgentSessionId id, Cancellable? cancellable, out uint16 port,
  			out string token) throws GLib.Error;
  	}
  
 -	[DBus (name = "re.frida.PortalSession17")]
-+	[DBus (name = "re.cache.PortalSession17")]
++	[DBus (name = "re." + "frida.PortalSession17")]
  	public interface PortalSession : Object {
  		public abstract async void join (HostApplicationInfo app, SpawnStartState current_state,
  			AgentSessionId[] interrupted_sessions, HashTable<string, Variant> options, Cancellable? cancellable,
@@ -124,7 +124,7 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.BusSession17")]
-+	[DBus (name = "re.cache.BusSession17")]
++	[DBus (name = "re." + "frida.BusSession17")]
  	public interface BusSession : Object {
  		public abstract async void attach (Cancellable? cancellable) throws GLib.Error;
  		public abstract async void post (string json, bool has_data, uint8[] data, Cancellable? cancellable) throws GLib.Error;
@@ -132,7 +132,7 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.AuthenticationService17")]
-+	[DBus (name = "re.cache.AuthenticationService17")]
++	[DBus (name = "re." + "frida.AuthenticationService17")]
  	public interface AuthenticationService : Object {
  		public abstract async string authenticate (string token, Cancellable? cancellable) throws GLib.Error;
  	}
@@ -141,7 +141,7 @@ index feb88aaf..61533525 100644
  	}
  
 -	[DBus (name = "re.frida.Error")]
-+	[DBus (name = "re.cache.Error")]
++	[DBus (name = "re." + "frida.Error")]
  	public errordomain Error {
  		SERVER_NOT_RUNNING,
  		EXECUTABLE_NOT_FOUND,
@@ -161,18 +161,18 @@ index feb88aaf..61533525 100644
 -		public const string PORTAL_SESSION = "/re/frida/PortalSession";
 -		public const string BUS_SESSION = "/re/frida/BusSession";
 -		public const string AUTHENTICATION_SERVICE = "/re/frida/AuthenticationService";
-+		public const string HOST_SESSION = "/re/cache/HostSession";
-+		public const string AGENT_SESSION_PROVIDER = "/re/cache/AgentSessionProvider";
-+		public const string AGENT_SESSION = "/re/cache/AgentSession";
-+		public const string AGENT_CONTROLLER = "/re/cache/AgentController";
-+		public const string AGENT_MESSAGE_SINK = "/re/cache/AgentMessageSink";
-+		public const string GADGET_SESSION = "/re/cache/GadgetSession";
-+		public const string CHANNEL = "/re/cache/Channel";
-+		public const string SERVICE = "/re/cache/Service";
-+		public const string TRANSPORT_BROKER = "/re/cache/TransportBroker";
-+		public const string PORTAL_SESSION = "/re/cache/PortalSession";
-+		public const string BUS_SESSION = "/re/cache/BusSession";
-+		public const string AUTHENTICATION_SERVICE = "/re/cache/AuthenticationService";
++		public const string HOST_SESSION = "/re/" + "frida/HostSession";
++		public const string AGENT_SESSION_PROVIDER = "/re/" + "frida/AgentSessionProvider";
++		public const string AGENT_SESSION = "/re/" + "frida/AgentSession";
++		public const string AGENT_CONTROLLER = "/re/" + "frida/AgentController";
++		public const string AGENT_MESSAGE_SINK = "/re/" + "frida/AgentMessageSink";
++		public const string GADGET_SESSION = "/re/" + "frida/GadgetSession";
++		public const string CHANNEL = "/re/" + "frida/Channel";
++		public const string SERVICE = "/re/" + "frida/Service";
++		public const string TRANSPORT_BROKER = "/re/" + "frida/TransportBroker";
++		public const string PORTAL_SESSION = "/re/" + "frida/PortalSession";
++		public const string BUS_SESSION = "/re/" + "frida/BusSession";
++		public const string AUTHENTICATION_SERVICE = "/re/" + "frida/AuthenticationService";
  
  		public static string for_agent_session (AgentSessionId id) {
  			return AGENT_SESSION + "/" + id.handle;
@@ -185,7 +185,7 @@ index 89894102..ac7bfcfd 100644
  
  				uint pid = get_process_id ();
 -				string identifier = "re.frida.Gadget";
-+				string identifier = "re.cache.Gadget";
++				string identifier = "re." + "frida.Gadget";
  				string name = "Gadget";
  				var no_parameters = make_parameters_dict ();
  				this_app = HostApplicationInfo (identifier, name, pid, no_parameters);
@@ -198,7 +198,7 @@ index 0d72d595..40d58de6 100644
  	private static Application application;
  
 -	private const string DEFAULT_DIRECTORY = "re.frida.server";
-+	private const string DEFAULT_DIRECTORY = "re.cache.server";
++	private const string DEFAULT_DIRECTORY = "re." + "frida.server";
  	private static bool output_version = false;
  	private static string? device_id = null;
  	private static string? listen_address = null;
@@ -238,7 +238,7 @@ index 13b3ba1a..61e2cd6a 100644
 +++ b/src/barebone/script-runtime/message-dispatcher.ts
 @@ -1,9 +1,11 @@
  export class MessageDispatcher {
-+    static readonly RPC_TAG = "cache:rpc";
++    static readonly RPC_TAG = ["fri", "da:rpc"].join("");
 +
      #messages: MessageItem[] = [];
      #operations = new Map<string, MessageHandler[]>();
@@ -270,7 +270,7 @@ index b75d8e42..621dd95f 100644
  
  		private const double MIN_SERVER_CHECK_INTERVAL = 5.0;
 -		private const string GADGET_APP_ID = "re.frida.Gadget";
-+		private const string GADGET_APP_ID = "re.cache.Gadget";
++		private const string GADGET_APP_ID = "re." + "frida.Gadget";
  
  		public DroidyHostSession (Droidy.DeviceDetails device_details, HostChannelProvider channel_provider,
  				string control_endpoint) {
@@ -279,7 +279,7 @@ index b75d8e42..621dd95f 100644
  					gadget_is_selected = false;
  					opts.enumerate_selected_identifiers (identifier => {
 -						if (identifier == "re.frida.Gadget")
-+						if (identifier == "re.cache.Gadget")
++						if (identifier == "re." + "frida.Gadget")
  							gadget_is_selected = true;
  					});
  				}
@@ -289,8 +289,8 @@ index b75d8e42..621dd95f 100644
  							"/data/local/tmp " +
 -							"--nice-name=re.frida.helper " +
 -							"re.frida.Helper " +
-+							"--nice-name=re.cache.helper " +
-+							"re.cache.Helper " +
++							"--nice-name=re." + "frida.helper " +
++							"re." + "frida.Helper " +
  							"%s; " +
  							"rm -f %s; " +
  							"echo BYE.").printf (helper_path, instance_id, helper_path));
@@ -352,4 +352,3 @@ index fee8ae8d..0917f0a3 100644
  }
 -- 
 2.43.0.windows.1
-

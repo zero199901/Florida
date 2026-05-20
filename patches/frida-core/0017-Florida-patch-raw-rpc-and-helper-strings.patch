@@ -4,8 +4,8 @@ Date: Wed, 20 May 2026 01:28:13 +0800
 Subject: [PATCH] Florida: patch raw runtime strings in post-process
 
 ---
- src/anti-anti-frida.py | 33 +++++++++++++++++++++++++++++++++
- 1 file changed, 33 insertions(+)
+ src/anti-anti-frida.py | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
 
 diff --git a/src/anti-anti-frida.py b/src/anti-anti-frida.py
 index 2505c865..cf254b9f 100644
@@ -19,13 +19,11 @@ index 2505c865..cf254b9f 100644
  
  
  RANDOM_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-@@ -11,6 +12,26 @@ THREAD_PATCHES = [
+@@ -11,6 +12,21 @@ THREAD_PATCHES = [
      ("gmain", 5),
      ("gdbus", 5),
  ]
 +RAW_REPLACEMENTS = [
-+    (b"re/frida", b"re/cache"),
-+    (b"frida:rpc", b"cache:rpc"),
 +    (b"frida-helper", b"cache-helper"),
 +    (b"frida-agent", b"cache-agent"),
 +    (b"frida_agent", b"cache_agent"),
@@ -37,9 +35,6 @@ index 2505c865..cf254b9f 100644
 +    (b"frida-gadget", b"cache-gadget"),
 +    (b"frida-main-loop", b"cache-main-loop"),
 +    (b"/frida-", b"/cache-"),
-+    (b"Frida", b"Cache"),
-+    (b"FRIDA", b"CACHE"),
-+    (b"frida", b"cache"),
 +    (b"Linjector", b"Uinjector"),
 +    (b"linjector", b"uinjector"),
 +]

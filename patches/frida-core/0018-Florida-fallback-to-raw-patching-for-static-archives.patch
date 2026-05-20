@@ -11,14 +11,14 @@ diff --git a/src/anti-anti-frida.py b/src/anti-anti-frida.py
 index cf254b9f..d4f89ed1 100644
 --- a/src/anti-anti-frida.py
 +++ b/src/anti-anti-frida.py
-@@ -22,6 +22,7 @@ RAW_REPLACEMENTS = [
+@@ -20,6 +20,7 @@ RAW_REPLACEMENTS = [
      (b"frida-server", b"cache-server"),
      (b"frida-gadget", b"cache-gadget"),
      (b"frida-main-loop", b"cache-main-loop"),
 +    (b"GumScript", b"tpircSmuG"),
      (b"/frida-", b"/cache-"),
-     (b"Frida", b"Cache"),
-     (b"FRIDA", b"CACHE"),
+     (b"Linjector", b"Uinjector"),
+     (b"linjector", b"uinjector"),
 @@ -83,7 +84,10 @@ def main(argv):
      log_color(f"[*] Patch frida-agent: {input_file}")
      binary = lief.parse(input_file)
