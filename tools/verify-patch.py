@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import hashlib
 import lzma
 from pathlib import Path
+import zlib
 
 
 BAD_STRINGS = [
@@ -64,6 +66,9 @@ ARTIFACT_PATTERNS = [
     "florida-gumjs-*-android-*.a.gz",
 ]
 
+DEX_MAGIC_PREFIX = b"dex\n"
+DEX_HEADER_SIZE = 0x70
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="验证 Florida 产物 patch 状态")
@@ -112,6 +117,48 @@ def contains_any(data: bytes, needles: list[str]) -> list[str]:
     return found
 
 
+def find_broken_embedded_dex(data: bytes) -> list[str]:
+    broken: list[str] = []
+    start = 0
+    while True:
+        offset = data.find(DEX_MAGIC_PREFIX, start)
+        if offset == -1:
+            break
+        if offset + DEX_HEADER_SIZE > len(data):
+            break
+
+        version = data[offset + 4:offset + 7]
+        file_size = int.from_bytes(data[offset + 0x20:offset + 0x24], "little")
+        header_size = int.from_bytes(data[offset + 0x24:offset + 0x28], "little")
+        endian_tag = int.from_bytes(data[offset + 0x28:offset + 0x2C], "little")
+        is_dex = (
+            data[offset + 7] == 0
+            and version.isdigit()
+            and header_size == DEX_HEADER_SIZE
+            and file_size >= DEX_HEADER_SIZE
+            and offset + file_size <= len(data)
+            and endian_tag in {0x12345678, 0x78563412}
+        )
+        if not is_dex:
+            start = offset + 4
+            continue
+
+        dex = data[offset:offset + file_size]
+        expected_checksum = int.from_bytes(dex[8:12], "little")
+        actual_checksum = zlib.adler32(dex[12:]) & 0xFFFFFFFF
+        expected_signature = dex[12:32].hex()
+        actual_signature = hashlib.sha1(dex[32:]).hexdigest()
+        if expected_checksum != actual_checksum or expected_signature != actual_signature:
+            broken.append(
+                f"@0x{offset:x} size={file_size} "
+                f"adler={expected_checksum:08x}/{actual_checksum:08x} "
+                f"sha1={expected_signature[:8]}.../{actual_signature[:8]}..."
+            )
+        start = offset + file_size
+
+    return broken
+
+
 def is_gumjs_static_archive(path: Path) -> bool:
     return "-gumjs-" in path.name and ".a." in path.name
 
@@ -120,19 +167,20 @@ def verify_one(
     path: Path,
     strict: bool,
     require_good: bool,
-) -> tuple[bool, list[str], list[str], list[str], list[str], list[str], list[str]]:
+) -> tuple[bool, list[str], list[str], list[str], list[str], list[str], list[str], list[str]]:
     data = read_bytes(path)
     found_bad = contains_any(data, BAD_STRINGS)
     found_good = contains_any(data, GOOD_STRINGS)
     found_strict = contains_any(data, STRICT_BAD_STRINGS) if strict else []
     found_warn = contains_any(data, WARN_STRINGS)
     found_info = contains_any(data, INFO_STRINGS)
+    broken_dex = find_broken_embedded_dex(data)
     ignored_bad: list[str] = []
 
     is_gumjs = is_gumjs_static_archive(path)
     missing_good = require_good and not is_gumjs and not found_good
 
-    passed = not found_bad and not found_strict and not missing_good
+    passed = not found_bad and not found_strict and not missing_good and not broken_dex
     if missing_good:
         found_bad = found_bad + ["<missing patched marker>"]
 
@@ -143,6 +191,7 @@ def verify_one(
         found_strict,
         found_warn,
         found_info,
+        broken_dex,
         ignored_bad,
     )
 
@@ -180,6 +229,7 @@ def main() -> int:
                 found_strict,
                 found_warn,
                 found_info,
+                broken_dex,
                 ignored_bad,
             ) = verify_one(
                 artifact,
@@ -202,6 +252,8 @@ def main() -> int:
             print(f"  WARN: {', '.join(found_warn)}")
         if found_info:
             print(f"  INFO: {', '.join(found_info)}")
+        if broken_dex:
+            print(f"  嵌入 dex 校验失败: {'; '.join(broken_dex)}")
         if ignored_bad:
             print(f"  静态库保留符号(仅提示): {', '.join(ignored_bad)}")
         if found_good:
@@ -211,6 +263,7 @@ def main() -> int:
             and not found_strict
             and not found_warn
             and not found_info
+            and not broken_dex
             and not found_good
             and not ignored_bad
         ):

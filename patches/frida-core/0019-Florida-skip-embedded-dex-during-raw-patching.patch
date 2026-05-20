@@ -1,0 +1,80 @@
+From 6a0e7a649f9a7b3b6b20d6f8ee4f5f6a7d8c9b10 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Wed, 20 May 2026 22:45:00 +0800
+Subject: [PATCH] Florida: skip embedded dex during raw patching
+
+---
+ src/anti-anti-frida.py | 48 ++++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 44 insertions(+), 4 deletions(-)
+
+diff --git a/src/anti-anti-frida.py b/src/anti-anti-frida.py
+index 34f7b11c..ebf9816c 100644
+--- a/src/anti-anti-frida.py
++++ b/src/anti-anti-frida.py
+@@ -6,6 +6,8 @@ from pathlib import Path
+ 
+ 
+ RANDOM_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
++DEX_MAGIC_PREFIX = b"dex\n"
++DEX_HEADER_SIZE = 0x70
+ PATCH_STRINGS = ["FridaScriptEngine", "GLib-GIO", "GDBusProxy", "GumScript"]
+ THREAD_PATCHES = [
+     ("gum-js-loop", 11),
+@@ -84,13 +86,51 @@ def patch_thread_names(input_file):
+         patch_thread_name(input_file, source, length)
+ 
+ 
++def iter_embedded_dex_blobs(data):
++    start = 0
++    while True:
++        offset = data.find(DEX_MAGIC_PREFIX, start)
++        if offset == -1:
++            break
++        if offset + DEX_HEADER_SIZE > len(data):
++            break
++
++        version = data[offset + 4:offset + 7]
++        file_size = int.from_bytes(data[offset + 0x20:offset + 0x24], "little")
++        header_size = int.from_bytes(data[offset + 0x24:offset + 0x28], "little")
++        endian_tag = int.from_bytes(data[offset + 0x28:offset + 0x2c], "little")
++        is_dex = (
++            data[offset + 7] == 0
++            and version.isdigit()
++            and header_size == DEX_HEADER_SIZE
++            and file_size >= DEX_HEADER_SIZE
++            and offset + file_size <= len(data)
++            and endian_tag in {0x12345678, 0x78563412}
++        )
++        if is_dex:
++            yield offset, file_size
++            start = offset + file_size
++        else:
++            start = offset + 4
++
++
+ def patch_raw_strings(input_file):
+     path = Path(input_file)
+     data = path.read_bytes()
+-    patched = data
+-    for source, target in RAW_REPLACEMENTS:
+-        patched = patched.replace(source, target)
+-    if patched != data:
++    patched = bytearray(data)
++    dex_ranges = list(iter_embedded_dex_blobs(data))
++    cursor = 0
++    changed = False
++    for offset, file_size in dex_ranges + [(len(data), 0)]:
++        chunk = bytes(patched[cursor:offset])
++        updated = chunk
++        for source, target in RAW_REPLACEMENTS:
++            updated = updated.replace(source, target)
++        if updated != chunk:
++            patched[cursor:offset] = updated
++            changed = True
++        cursor = offset + file_size
++    if changed:
+         log_color("[*] Patch raw string replacements")
+         path.write_bytes(patched)
+ 
+-- 
+2.43.0.windows.1
