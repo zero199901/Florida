@@ -118,9 +118,21 @@ jobs:
         
         export ANDROID_NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}
         echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
-        export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$(dirname "$(dirname "$ANDROID_NDK_ROOT")")}"
-        if [[ ! -f "$ANDROID_SDK_ROOT/platforms/android-19/android.jar" ]]; then
-          export ANDROID_SDK_ROOT="$(dirname "$(dirname "$(dirname "$ANDROID_NDK_ROOT")")")"
+        for candidate in \
+          "${ANDROID_SDK_ROOT:-}" \
+          "${ANDROID_HOME:-}" \
+          "$(dirname "$(dirname "$ANDROID_NDK_ROOT")")" \
+          "$(dirname "$(dirname "$(dirname "$ANDROID_NDK_ROOT")")")" \
+          "/usr/local/lib/android/sdk"
+        do
+          if [[ -n "$candidate" && -d "$candidate/build-tools" && -d "$candidate/platforms" ]]; then
+            export ANDROID_SDK_ROOT="$candidate"
+            break
+          fi
+        done
+        if [[ -z "${ANDROID_SDK_ROOT:-}" ]]; then
+          echo "Unable to locate ANDROID_SDK_ROOT"
+          exit 1
         fi
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
         BUILD_TOOLS_DIR="$(find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
@@ -128,8 +140,16 @@ jobs:
           echo "Android build-tools not found under $ANDROID_SDK_ROOT/build-tools"
           exit 1
         fi
+        ANDROID_PLATFORM_DIR="$(find "$ANDROID_SDK_ROOT/platforms" -mindepth 1 -maxdepth 1 -type d -name 'android-*' | sort -V | tail -n 1)"
+        if [[ -z "$ANDROID_PLATFORM_DIR" ]]; then
+          echo "Android platforms not found under $ANDROID_SDK_ROOT/platforms"
+          exit 1
+        fi
+        ANDROID_API_LEVEL="${ANDROID_PLATFORM_DIR##*-}"
         export PATH="$BUILD_TOOLS_DIR:$PATH"
         echo "ANDROID_BUILD_TOOLS_DIR=$BUILD_TOOLS_DIR"
+        echo "ANDROID_PLATFORM_DIR=$ANDROID_PLATFORM_DIR"
+        echo "ANDROID_API_LEVEL=$ANDROID_API_LEVEL"
         
         git clone --recurse-submodules https://github.com/frida/frida
         cd frida
@@ -145,7 +165,7 @@ jobs:
           cd ../..
           echo $i
         done
-        make -C subprojects/frida-core/src/android-helper helper.dex
+        make -C subprojects/frida-core/src/android-helper ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT" ANDROID_API_LEVEL="$ANDROID_API_LEVEL" helper.dex
         cd ..
         
         ARCHES="android-arm android-arm64 android-x86 android-x86_64"
