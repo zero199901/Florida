@@ -1,0 +1,29 @@
+From 0d6203c98bf75fb73785f80ce6a46dd360fbf3c1 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Thu, 21 May 2026 03:12:41 +0800
+Subject: [PATCH] Florida: extend Android helper APEX library paths
+
+---
+ src/linux/linux-host-session.vala | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/linux/linux-host-session.vala b/src/linux/linux-host-session.vala
+index ad3525b8..fb82b1db 100644
+--- a/src/linux/linux-host-session.vala
++++ b/src/linux/linux-host-session.vala
+@@ -661,9 +661,12 @@ namespace Frida {
+ 				if (vm_mod == null) {
+ 					var libdir = ((sizeof (void *) == 8) ? "lib64" : "lib");
+ 					ensure_directories_on_ld_library_path ({
++						"/apex/com.android.adbd/" + libdir,
+ 						"/apex/com.android.runtime/" + libdir,
+ 						"/apex/com.android.art/" + libdir,
+-						"/apex/com.android.conscrypt/" + libdir
++						"/apex/com.android.conscrypt/" + libdir,
++						"/apex/com.android.i18n/" + libdir,
++						"/apex/com.android.os.statsd/" + libdir
+ 					});
+ 
+ 					vm_mod = Android.Module.open (vm_soname, LAZY | LOCAL);
+-- 
+2.43.0.windows.1
