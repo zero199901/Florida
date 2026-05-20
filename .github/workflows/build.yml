@@ -108,7 +108,7 @@ jobs:
       run: |
         sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get install build-essential tree ninja-build gcc-multilib g++-multilib lib32stdc++-9-dev flex bison ruby ruby-dev python3-requests python3-setuptools python3-dev python3-pip libc6-dev libc6-dev-i386 -y
         sudo gem install fpm -v 1.11.0 --no-document
-        python3 -m pip install lief graphlib
+        python3 -m pip install build wheel lief graphlib
 
     - name: build frida for Android
       shell: bash
@@ -255,6 +255,33 @@ jobs:
         cp build-android-arm64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a.gz release-assets/florida-gumjs-${VERSION}-android-arm64.a.gz
         cp build-android-x86/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a.gz release-assets/florida-gumjs-${VERSION}-android-x86.a.gz
         cp build-android-x86_64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a.gz release-assets/florida-gumjs-${VERSION}-android-x86_64.a.gz
+
+    - name: build patched client wheels
+      shell: bash
+      run: |
+        set -euxo pipefail
+        mkdir -p release-assets
+        rm -rf frida/subprojects/frida-python/subprojects/frida-core
+        ln -s ../../frida-core frida/subprojects/frida-python/subprojects/frida-core
+
+        pushd frida/subprojects/frida-python
+        python3 -m pip wheel . --no-deps --wheel-dir ../../../release-assets
+        popd
+
+        pushd frida/subprojects/frida-tools
+        make
+        python3 -m pip wheel . --no-deps --wheel-dir ../../../release-assets
+        popd
+
+    - name: smoke test patched client wheels
+      shell: bash
+      run: |
+        set -euxo pipefail
+        python3 -m venv .venv-wheel-smoke
+        source .venv-wheel-smoke/bin/activate
+        python -m pip install --upgrade pip
+        python -m pip install release-assets/florida_frida-*.whl release-assets/florida_frida_tools-*.whl
+        python -c "import frida, frida_tools.application; print(frida.__version__); print(frida_tools.application.GADGET_APP_ID)"
 
     - name: verify release assets
       shell: bash

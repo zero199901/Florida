@@ -1,0 +1,215 @@
+From 06785ab0bbb899e4b3630fb652c0d5894473e809 Mon Sep 17 00:00:00 2001
+From: Your Name <your.email@example.com>
+Date: Thu, 21 May 2026 00:38:06 +0800
+Subject: [PATCH] Florida: ship hidden CLI client package
+
+---
+ agents/repl/agent.ts       |  6 ++---
+ agents/tracer/agent.ts     |  6 ++---
+ frida_tools/application.py | 21 ++++++++++-------
+ frida_tools/repl.py        |  2 +-
+ setup.py                   | 48 +++++++++++++++++++-------------------
+ 5 files changed, 44 insertions(+), 39 deletions(-)
+
+diff --git a/agents/repl/agent.ts b/agents/repl/agent.ts
+index 86f8b97..b5b7656 100644
+--- a/agents/repl/agent.ts
++++ b/agents/repl/agent.ts
+@@ -45,10 +45,10 @@ function registerLazyBridgeGetter(name: string) {
+ }
+ 
+ function lazyLoadBridge(name: string): unknown {
+-    send({ type: "frida:load-bridge", name });
++    send({ type: "cache:load-bridge", name });
+     let bridge: unknown;
+-    recv("frida:bridge-loaded", message => {
+-        bridge = Script.evaluate(`/frida/bridges/${message.filename}`,
++    recv("cache:bridge-loaded", message => {
++        bridge = Script.evaluate(`/cache/bridges/${message.filename}`,
+             "(function () { " + [
+                 message.source,
+                 `Object.defineProperty(globalThis, '${name}', { value: bridge });`,
+diff --git a/agents/tracer/agent.ts b/agents/tracer/agent.ts
+index 7d6bab6..ab57af3 100644
+--- a/agents/tracer/agent.ts
++++ b/agents/tracer/agent.ts
+@@ -1020,10 +1020,10 @@ function registerLazyBridgeGetter(name: string) {
+ }
+ 
+ function lazyLoadBridge(name: string): unknown {
+-    send({ type: "frida:load-bridge", name });
++    send({ type: "cache:load-bridge", name });
+     let bridge: unknown;
+-    recv("frida:bridge-loaded", message => {
+-        bridge = Script.evaluate(`/frida/bridges/${message.filename}`,
++    recv("cache:bridge-loaded", message => {
++        bridge = Script.evaluate(`/cache/bridges/${message.filename}`,
+             "(function () { " + [
+                 message.source,
+                 `Object.defineProperty(globalThis, '${name}', { value: bridge });`,
+diff --git a/frida_tools/application.py b/frida_tools/application.py
+index 77826aa..e41aefe 100644
+--- a/frida_tools/application.py
++++ b/frida_tools/application.py
+@@ -24,6 +24,11 @@ import frida._frida as _frida
+ 
+ from frida_tools.reactor import Reactor
+ 
++GADGET_APP_ID = "re.cache.Gadget"
++BRIDGE_LOAD_MESSAGE = "cache:load-bridge"
++BRIDGE_LOADED_MESSAGE = "cache:bridge-loaded"
++APP_DIR_NAME = ".florida"
++
+ TYPED_OPTION_PATTERN = re.compile(r"(.+)=\((string|bool|int)\)(.+)")
+ 
+ T = TypeVar("T")
+@@ -290,12 +295,12 @@ class ConsoleApplication:
+         parser.add_argument(
+             "-R",
+             "--remote",
+-            help="connect to remote frida-server",
++            help="connect to remote florida-server",
+             action="store_const",
+             const="remote",
+             dest="device_type",
+         )
+-        parser.add_argument("-H", "--host", help="connect to remote frida-server on HOST")
++        parser.add_argument("-H", "--host", help="connect to remote florida-server on HOST")
+         parser.add_argument("--certificate", help="speak TLS with HOST, expecting CERTIFICATE")
+         parser.add_argument("--origin", help="connect to remote server with “Origin” header set to ORIGIN")
+         parser.add_argument("--token", help="authenticate with HOST using TOKEN")
+@@ -307,7 +312,7 @@ class ConsoleApplication:
+         )
+         parser.add_argument(
+             "--device-option",
+-            help="override a backend-specific option, such as “control-endpoint=(string)localabstract:/my-frida-server” (supported types are: string, bool, int)",
++            help="override a backend-specific option, such as “control-endpoint=(string)localabstract:/my-cache-server” (supported types are: string, bool, int)",
+             metavar="option",
+             action="append",
+             dest="device_options",
+@@ -643,7 +648,7 @@ class ConsoleApplication:
+     def _pick_worker_pid(self) -> int:
+         try:
+             frontmost = self._device.get_frontmost_application()
+-            if frontmost is not None and frontmost.identifier == "re.frida.Gadget":
++            if frontmost is not None and frontmost.identifier == GADGET_APP_ID:
+                 return frontmost.pid
+         except:
+             pass
+@@ -852,11 +857,11 @@ class ConsoleApplication:
+         return result[0]
+ 
+     def _get_default_frida_dir(self) -> str:
+-        return os.path.join(os.path.expanduser("~"), ".frida")
++        return os.path.join(os.path.expanduser("~"), APP_DIR_NAME)
+ 
+     def _get_windows_frida_dir(self) -> str:
+         appdata = os.environ["LOCALAPPDATA"]
+-        return os.path.join(appdata, "frida")
++        return os.path.join(appdata, "florida")
+ 
+     def _get_or_create_config_dir(self) -> str:
+         config_dir = os.path.join(self._get_default_frida_dir(), "config")
+@@ -901,7 +906,7 @@ class ConsoleApplication:
+             return False
+ 
+         t = payload.get("type")
+-        if t != "frida:load-bridge":
++        if t != BRIDGE_LOAD_MESSAGE:
+             return False
+ 
+         stem = payload["name"].lower()
+@@ -909,7 +914,7 @@ class ConsoleApplication:
+ 
+         script.post(
+             {
+-                "type": "frida:bridge-loaded",
++                "type": BRIDGE_LOADED_MESSAGE,
+                 "filename": bridge.name,
+                 "source": bridge.read_text(encoding="utf-8"),
+             }
+diff --git a/frida_tools/repl.py b/frida_tools/repl.py
+index 895b121..65c5119 100644
+--- a/frida_tools/repl.py
++++ b/frida_tools/repl.py
+@@ -923,7 +923,7 @@ URL: {url}
+                 os.rename(old_file, new_path)
+                 return True
+ 
+-        old_file = os.path.join(os.path.expanduser("~"), ".frida", name)
++        old_file = os.path.join(os.path.expanduser("~"), ".florida", name)
+         if os.path.isfile(old_file):
+             os.rename(old_file, new_path)
+             return True
+diff --git a/setup.py b/setup.py
+index 90ce82f..6354839 100644
+--- a/setup.py
++++ b/setup.py
+@@ -14,17 +14,17 @@ in_source_package = pkg_info.exists()
+ 
+ def main():
+     setup(
+-        name="frida-tools",
++        name="florida-frida-tools",
+         version=detect_version(),
+-        description="Frida CLI tools",
+-        long_description="CLI tools for [Frida](https://frida.re).",
++        description="Florida CLI tools",
++        long_description="CLI tools for Florida.",
+         long_description_content_type="text/markdown",
+-        author="Frida Developers",
+-        author_email="oleavr@frida.re",
+-        url="https://frida.re",
++        author="Florida Developers",
++        author_email="noreply@florida.dev",
++        url="https://github.com/zero199901/Florida",
+         install_requires=[
+             "colorama >= 0.2.7, < 1.0.0",
+-            "frida >= 17.9.0, < 18.0.0",
++            "florida-frida >= 17.9.0, < 18.0.0",
+             "prompt-toolkit >= 2.0.0, < 4.0.0",
+             "pygments >= 2.0.2, < 3.0.0",
+             "websockets >= 13.0.0, < 14.0.0",
+@@ -59,23 +59,23 @@ def main():
+         },
+         entry_points={
+             "console_scripts": [
+-                "frida = frida_tools.repl:main",
+-                "frida-ls-devices = frida_tools.lsd:main",
+-                "frida-ps = frida_tools.ps:main",
+-                "frida-kill = frida_tools.kill:main",
+-                "frida-ls = frida_tools.ls:main",
+-                "frida-rm = frida_tools.rm:main",
+-                "frida-pull = frida_tools.pull:main",
+-                "frida-push = frida_tools.push:main",
+-                "frida-discover = frida_tools.discoverer:main",
+-                "frida-trace = frida_tools.tracer:main",
+-                "frida-strace = frida_tools.stracer:main",
+-                "frida-itrace = frida_tools.itracer:main",
+-                "frida-join = frida_tools.join:main",
+-                "frida-create = frida_tools.creator:main",
+-                "frida-compile = frida_tools.compiler:main",
+-                "frida-pm = frida_tools.pm:main",
+-                "frida-apk = frida_tools.apk:main",
++                "florida = frida_tools.repl:main",
++                "florida-ls-devices = frida_tools.lsd:main",
++                "florida-ps = frida_tools.ps:main",
++                "florida-kill = frida_tools.kill:main",
++                "florida-ls = frida_tools.ls:main",
++                "florida-rm = frida_tools.rm:main",
++                "florida-pull = frida_tools.pull:main",
++                "florida-push = frida_tools.push:main",
++                "florida-discover = frida_tools.discoverer:main",
++                "florida-trace = frida_tools.tracer:main",
++                "florida-strace = frida_tools.stracer:main",
++                "florida-itrace = frida_tools.itracer:main",
++                "florida-join = frida_tools.join:main",
++                "florida-create = frida_tools.creator:main",
++                "florida-compile = frida_tools.compiler:main",
++                "florida-pm = frida_tools.pm:main",
++                "florida-apk = frida_tools.apk:main",
+             ]
+         },
+     )
+-- 
+2.43.0.windows.1

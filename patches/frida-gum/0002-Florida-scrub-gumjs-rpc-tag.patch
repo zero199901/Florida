@@ -14,7 +14,7 @@ index 50afbb71..894f8105 100644
 +++ b/bindings/gumjs/runtime/message-dispatcher.js
 @@ -1,4 +1,5 @@
  export function MessageDispatcher() {
-+  const RPC_TAG = ['fri', 'da:rpc'].join('');
++  const RPC_TAG = 'cache:rpc';
    const messages = [];
    const operations = {};
  
@@ -48,7 +48,7 @@ index 242d639b..9c57f371 100644
 +++ b/bindings/gumjs/runtime/worker.js
 @@ -1,4 +1,5 @@
  export class Worker {
-+  static RPC_TAG = ['fri', 'da:rpc'].join('');
++  static RPC_TAG = 'cache:rpc';
    _pendingRequests = new Map();
    _nextRequestId = 1;
  

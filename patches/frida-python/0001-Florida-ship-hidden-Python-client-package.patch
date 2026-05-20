@@ -1,0 +1,66 @@
+From 322754a9202b692be053365af366f75420a9cfda Mon Sep 17 00:00:00 2001
+From: Your Name <your.email@example.com>
+Date: Thu, 21 May 2026 00:38:06 +0800
+Subject: [PATCH] Florida: ship hidden Python client package
+
+---
+ frida/core.py |  5 +++--
+ setup.py      | 10 +++++-----
+ 2 files changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/frida/core.py b/frida/core.py
+index aa09d6b..2c89421 100644
+--- a/frida/core.py
++++ b/frida/core.py
+@@ -46,6 +46,7 @@ else:
+ from . import _frida
+ 
+ _device_manager = None
++SCRIPT_RPC_TAG = "cache:rpc"
+ 
+ _Cancellable = _frida.Cancellable
+ 
+@@ -510,7 +511,7 @@ class Script:
+         return request_id
+ 
+     def _send_rpc_call(self, request_id: int, args: Any, data: Optional[bytes]) -> None:
+-        self.post(["frida:rpc", request_id, *args], data)
++        self.post([SCRIPT_RPC_TAG, request_id, *args], data)
+ 
+     def _on_rpc_message(self, request_id: int, operation: str, params: List[Any], data: Optional[Any]) -> None:
+         if operation in ("ok", "error"):
+@@ -553,7 +554,7 @@ class Script:
+             level = message["level"]
+             text = payload
+             self._log_handler(level, text)
+-        elif mtype == "send" and isinstance(payload, list) and len(payload) > 0 and payload[0] == "frida:rpc":
++        elif mtype == "send" and isinstance(payload, list) and len(payload) > 0 and payload[0] == SCRIPT_RPC_TAG:
+             request_id = payload[1]
+             operation = payload[2]
+             params = payload[3:]
+diff --git a/setup.py b/setup.py
+index 488e047..834dfd8 100644
+--- a/setup.py
++++ b/setup.py
+@@ -16,14 +16,14 @@ FRIDA_EXTENSION = os.environ.get("FRIDA_EXTENSION", None)
+ 
+ def main():
+     setup(
+-        name="frida",
++        name="florida-frida",
+         version=detect_version(),
+-        description="Dynamic instrumentation toolkit for developers, reverse-engineers, and security researchers",
++        description="Dynamic instrumentation bindings for Florida",
+         long_description=compute_long_description(),
+         long_description_content_type="text/markdown",
+-        author="Frida Developers",
+-        author_email="oleavr@frida.re",
+-        url="https://frida.re",
++        author="Florida Developers",
++        author_email="noreply@florida.dev",
++        url="https://github.com/zero199901/Florida",
+         install_requires=["typing_extensions; python_version<'3.11'"],
+         python_requires=">=3.7",
+         license="wxWindows Library Licence, Version 3.1",
+-- 
+2.43.0.windows.1
