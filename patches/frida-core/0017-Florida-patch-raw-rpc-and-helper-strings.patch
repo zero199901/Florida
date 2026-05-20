@@ -4,8 +4,8 @@ Date: Wed, 20 May 2026 01:28:13 +0800
 Subject: [PATCH] Florida: patch raw runtime strings in post-process
 
 ---
- src/anti-anti-frida.py | 27 +++++++++++++++++++++++++++
- 1 file changed, 27 insertions(+)
+ src/anti-anti-frida.py | 33 +++++++++++++++++++++++++++++++++
+ 1 file changed, 33 insertions(+)
 
 diff --git a/src/anti-anti-frida.py b/src/anti-anti-frida.py
 index 2505c865..cf254b9f 100644
@@ -19,17 +19,23 @@ index 2505c865..cf254b9f 100644
  
  
  RANDOM_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-@@ -11,6 +12,20 @@ THREAD_PATCHES = [
+@@ -11,6 +12,26 @@ THREAD_PATCHES = [
      ("gmain", 5),
      ("gdbus", 5),
  ]
 +RAW_REPLACEMENTS = [
++    (b"re/frida", b"re/cache"),
 +    (b"frida:rpc", b"cache:rpc"),
 +    (b"frida-helper", b"cache-helper"),
++    (b"frida-agent", b"cache-agent"),
++    (b"frida_agent", b"cache_agent"),
++    (b"FridaLinjector", b"CacheUinjector"),
 +    (b"frida-zymbiote", b"cache-zymbiote"),
 +    (b"frida-error-quark", b"cache-error-quark"),
++    (b"frida-selinux-error-quark", b"cache-selinux-error-quark"),
 +    (b"frida-server", b"cache-server"),
 +    (b"frida-gadget", b"cache-gadget"),
++    (b"frida-main-loop", b"cache-main-loop"),
 +    (b"/frida-", b"/cache-"),
 +    (b"Frida", b"Cache"),
 +    (b"FRIDA", b"CACHE"),
