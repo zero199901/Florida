@@ -223,6 +223,12 @@ jobs:
       run: |
         python3 tools/verify-patch.py release-assets
         python3 tools/verify-patch.py release-assets --strict
+        python3 tools/scan-frida-signatures.py \
+          release-assets/florida-server-*-android-*.gz \
+          release-assets/florida-inject-*-android-*.gz \
+          release-assets/florida-gadget-*-android-*.so.gz \
+          --rules deep \
+          --limit 5
 
     - name: Create release and upload assets
       uses: softprops/action-gh-release@v3

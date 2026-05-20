@@ -160,6 +160,12 @@ verify_artifacts() {
   local logfile="${LOG_DIR}/verify-patch.log"
   run_logged "${logfile}" python3 "${REPO_ROOT}/tools/verify-patch.py" "${RELEASE_DIR}"
   run_logged "${logfile}" python3 "${REPO_ROOT}/tools/verify-patch.py" "${RELEASE_DIR}" --strict
+  run_logged "${logfile}" python3 "${REPO_ROOT}/tools/scan-frida-signatures.py" \
+    "${RELEASE_DIR}"/florida-server-*-android-*.gz \
+    "${RELEASE_DIR}"/florida-inject-*-android-*.gz \
+    "${RELEASE_DIR}"/florida-gadget-*-android-*.so.gz \
+    --rules deep \
+    --limit 5
 }
 
 main() {
