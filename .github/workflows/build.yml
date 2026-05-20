@@ -118,6 +118,18 @@ jobs:
         
         export ANDROID_NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}
         echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
+        export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$(dirname "$(dirname "$ANDROID_NDK_ROOT")")}"
+        if [[ ! -f "$ANDROID_SDK_ROOT/platforms/android-19/android.jar" ]]; then
+          export ANDROID_SDK_ROOT="$(dirname "$(dirname "$(dirname "$ANDROID_NDK_ROOT")")")"
+        fi
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+        BUILD_TOOLS_DIR="$(find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+        if [[ -z "$BUILD_TOOLS_DIR" ]]; then
+          echo "Android build-tools not found under $ANDROID_SDK_ROOT/build-tools"
+          exit 1
+        fi
+        export PATH="$BUILD_TOOLS_DIR:$PATH"
+        echo "ANDROID_BUILD_TOOLS_DIR=$BUILD_TOOLS_DIR"
         
         git clone --recurse-submodules https://github.com/frida/frida
         cd frida
@@ -133,6 +145,7 @@ jobs:
           cd ../..
           echo $i
         done
+        make -C subprojects/frida-core/src/android-helper helper.dex
         cd ..
         
         ARCHES="android-arm android-arm64 android-x86 android-x86_64"
@@ -226,14 +239,22 @@ jobs:
     - name: verify release assets
       shell: bash
       run: |
-        python3 tools/verify-patch.py release-assets
-        python3 tools/verify-patch.py release-assets --strict
-        python3 tools/scan-frida-signatures.py \
-          release-assets/florida-server-*-android-*.gz \
-          release-assets/florida-inject-*-android-*.gz \
-          release-assets/florida-gadget-*-android-*.so.gz \
-          --rules deep \
-          --limit 5
+        set -o pipefail
+        {
+          python3 tools/verify-patch.py release-assets
+          python3 tools/verify-patch.py release-assets --strict
+          python3 tools/scan-frida-signatures.py \
+            release-assets/florida-server-*-android-*.gz \
+            release-assets/florida-inject-*-android-*.gz \
+            release-assets/florida-gadget-*-android-*.so.gz \
+            --rules deep \
+            --limit 5
+        } 2>&1 | tee verify-release-assets.log
+        {
+          echo '```'
+          cat verify-release-assets.log
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Create release and upload assets
       uses: softprops/action-gh-release@v3
