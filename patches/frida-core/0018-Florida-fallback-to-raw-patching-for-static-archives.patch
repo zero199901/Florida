@@ -1,0 +1,35 @@
+From 7e95fd2f92f145f40a04e3147f6a90a5c5df2e4a Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Wed, 20 May 2026 12:28:13 +0800
+Subject: [PATCH] Florida: fallback to raw patching for static archives
+
+---
+ src/anti-anti-frida.py | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/anti-anti-frida.py b/src/anti-anti-frida.py
+index cf254b9f..d4f89ed1 100644
+--- a/src/anti-anti-frida.py
++++ b/src/anti-anti-frida.py
+@@ -22,6 +22,7 @@ RAW_REPLACEMENTS = [
+     (b"frida-server", b"cache-server"),
+     (b"frida-gadget", b"cache-gadget"),
+     (b"frida-main-loop", b"cache-main-loop"),
++    (b"GumScript", b"tpircSmuG"),
+     (b"/frida-", b"/cache-"),
+     (b"Frida", b"Cache"),
+     (b"FRIDA", b"CACHE"),
+@@ -83,7 +84,11 @@ def main(argv):
+     log_color(f"[*] Patch frida-agent: {input_file}")
+     binary = lief.parse(input_file)
+     if not binary:
+-        log_color("[*] Not elf, exit")
++        log_color("[*] Not elf, fallback to raw patch only")
++        patch_raw_strings(input_file)
++        patch_thread_names(input_file)
++        log_color("[*] Patch Finish")
+         return 0
+ 
+     patch_symbols(binary)
+-- 
+2.43.0.windows.1

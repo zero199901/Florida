@@ -91,9 +91,15 @@ build_one() {
 package_artifacts() {
   local version="$1"
   local llvm_strip="${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+  local post_process="${FRIDA_DIR}/subprojects/frida-core/src/anti-anti-frida.py"
 
   if [[ ! -x "${llvm_strip}" ]]; then
     echo "llvm-strip not found: ${llvm_strip}" >&2
+    exit 1
+  fi
+
+  if [[ ! -f "${post_process}" ]]; then
+    echo "post-process script not found: ${post_process}" >&2
     exit 1
   fi
 
@@ -118,6 +124,11 @@ package_artifacts() {
   "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-arm64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
   "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-x86/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
   "${llvm_strip}" --strip-debug "${WORK_ROOT}/build-android-x86_64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
+
+  python3 "${post_process}" "${WORK_ROOT}/build-android-arm/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
+  python3 "${post_process}" "${WORK_ROOT}/build-android-arm64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
+  python3 "${post_process}" "${WORK_ROOT}/build-android-x86/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
+  python3 "${post_process}" "${WORK_ROOT}/build-android-x86_64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a"
 
   gzip -c "${WORK_ROOT}/build-android-arm/subprojects/frida-core/server/frida-server" > \
     "${RELEASE_DIR}/florida-server-${version}-android-arm.gz"

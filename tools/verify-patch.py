@@ -130,11 +130,6 @@ def verify_one(
     ignored_bad: list[str] = []
 
     is_gumjs = is_gumjs_static_archive(path)
-    if is_gumjs:
-        # gumjs 静态库会保留大量对象名/符号名，不适合按最终可执行产物同样的
-        # 规则一刀切判 FAIL；这里只保留展示，不参与 core 失败判定。
-        ignored_bad = found_bad
-        found_bad = []
     missing_good = require_good and not is_gumjs and not found_good
 
     passed = not found_bad and not found_strict and not missing_good

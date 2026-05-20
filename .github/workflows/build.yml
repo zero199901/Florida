@@ -176,6 +176,11 @@ jobs:
         "$LLVM_STRIP" --strip-debug build-android-x86/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
         "$LLVM_STRIP" --strip-debug build-android-x86_64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
 
+        python3 frida/subprojects/frida-core/src/anti-anti-frida.py build-android-arm/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
+        python3 frida/subprojects/frida-core/src/anti-anti-frida.py build-android-arm64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
+        python3 frida/subprojects/frida-core/src/anti-anti-frida.py build-android-x86/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
+        python3 frida/subprojects/frida-core/src/anti-anti-frida.py build-android-x86_64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
+
         gzip build-android-arm/subprojects/frida-core/server/frida-server
         gzip build-android-arm64/subprojects/frida-core/server/frida-server
         gzip build-android-x86/subprojects/frida-core/server/frida-server
