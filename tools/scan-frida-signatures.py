@@ -74,9 +74,34 @@ RULES = [
         "sets": {"strict"},
     },
     {
+        "keyword": "re/frida",
+        "severity": "fail",
+        "sets": {"strict", "deep"},
+    },
+    {
         "keyword": "frida-helper",
         "severity": "fail",
         "sets": {"strict"},
+    },
+    {
+        "keyword": "frida-agent",
+        "severity": "fail",
+        "sets": {"strict", "deep"},
+    },
+    {
+        "keyword": "FridaLinjector",
+        "severity": "fail",
+        "sets": {"strict", "deep"},
+    },
+    {
+        "keyword": "Linjector",
+        "severity": "fail",
+        "sets": {"strict", "deep"},
+    },
+    {
+        "keyword": "linjector",
+        "severity": "fail",
+        "sets": {"strict", "deep"},
     },
     {
         "keyword": "frida-gadget",
@@ -128,7 +153,43 @@ RULES = [
         "severity": "fail",
         "sets": {"strict"},
     },
+    {
+        "keyword": "Frida",
+        "severity": "fail",
+        "sets": {"deep"},
+    },
+    {
+        "keyword": "FRIDA",
+        "severity": "fail",
+        "sets": {"deep"},
+    },
+    {
+        "keyword": "frida-",
+        "severity": "fail",
+        "sets": {"deep"},
+    },
+    {
+        "keyword": "frida_",
+        "severity": "fail",
+        "sets": {"deep"},
+    },
+    {
+        "keyword": "/frida/",
+        "severity": "fail",
+        "sets": {"deep"},
+    },
+    {
+        "keyword": ".frida",
+        "severity": "fail",
+        "sets": {"deep"},
+    },
 ]
+
+RULESET_EXPANSION = {
+    "core": {"core"},
+    "strict": {"strict"},
+    "deep": {"core", "strict", "deep"},
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -136,9 +197,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("paths", nargs="+", help="待扫描的文件或目录")
     parser.add_argument(
         "--rules",
-        choices=["core", "strict"],
+        choices=["core", "strict", "deep"],
         default="core",
-        help="使用内置规则组",
+        help="使用内置规则组；deep 会展开扫描 Frida 家族残留",
     )
     parser.add_argument(
         "--needle",
@@ -169,8 +230,9 @@ def parse_args() -> argparse.Namespace:
 
 def select_rules(rule_set: str) -> list[dict]:
     selected: list[dict] = []
+    active_sets = RULESET_EXPANSION[rule_set]
     for rule in RULES:
-        if rule_set in rule["sets"]:
+        if not active_sets.isdisjoint(rule["sets"]):
             selected.append(rule)
     return selected
 

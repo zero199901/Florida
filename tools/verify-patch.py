@@ -26,7 +26,12 @@ BAD_STRINGS = [
 STRICT_BAD_STRINGS = [
     "frida:rpc",
     "re.frida",
+    "re/frida",
     "frida-helper",
+    "frida-agent",
+    "FridaLinjector",
+    "Linjector",
+    "linjector",
     "frida-eternal-agent",
     "frida-agent-emulated",
     "frida-generate-certificate",
@@ -71,7 +76,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--strict",
         action="store_true",
-        help="开启严格模式，额外检查 frida:rpc / re.frida / frida-helper",
+        help="开启严格模式，额外检查 rpc / helper / agent / injector 残留",
     )
     parser.add_argument(
         "--require-good",
