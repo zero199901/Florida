@@ -1,0 +1,23 @@
+From 42bec8eb4a71d8d89a116c1cee80efefe40a9bb5 Mon Sep 17 00:00:00 2001
+From: Your Name <your.email@example.com>
+Date: Thu, 21 May 2026 23:40:17 +0800
+Subject: [PATCH] Florida: add lief to wheel build requirements
+
+---
+ pyproject.toml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pyproject.toml b/pyproject.toml
+index 85966e1..e01c49e 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -1,5 +1,5 @@
+ [build-system]
+-requires = ["setuptools"]
++requires = ["setuptools", "lief"]
+ build-backend = "setuptools.build_meta"
+ 
+ [tool.black]
+-- 
+2.43.0.windows.1
+

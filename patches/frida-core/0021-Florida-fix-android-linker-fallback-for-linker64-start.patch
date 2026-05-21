@@ -1,0 +1,89 @@
+From c7e4cb334a6ad369d8f85c2ac78a81549541ba82 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.com>
+Date: Thu, 21 May 2026 23:40:17 +0800
+Subject: [PATCH] Florida: fix Android linker fallback for linker64 start
+
+---
+ src/linux/frida-helper-backend.vala | 58 ++++++++++++++++++++++++-----
+ 1 file changed, 49 insertions(+), 9 deletions(-)
+
+diff --git a/src/linux/frida-helper-backend.vala b/src/linux/frida-helper-backend.vala
+index c2295fdb..6c62bfdc 100644
+--- a/src/linux/frida-helper-backend.vala
++++ b/src/linux/frida-helper-backend.vala
+@@ -841,23 +841,63 @@ namespace Frida {
+ 			mmap_offset = (uint64) (uintptr) libc.find_export_by_name ("mmap") - local_libc.start;
+ 			munmap_offset = (uint64) (uintptr) libc.find_export_by_name ("munmap") - local_libc.start;
+ 
++			fallback_ld = "";
++			fallback_libc = Path.get_basename (local_libc.path);
++
+ 			try {
+ 				var program = new Gum.ElfModule.from_file ("/proc/self/exe");
+-				fallback_ld = program.interpreter;
+-				fallback_libc = Path.get_basename (local_libc.path);
++				unowned string? interpreter = program.interpreter;
++				if (interpreter != null && interpreter.length > 0)
++					fallback_ld = interpreter;
+ 			} catch (Gum.Error e) {
+-				assert_not_reached ();
+ 			}
+ 
+-			try {
+-				string target = FileUtils.read_link (fallback_ld);
+-				string parent_dir = Path.get_dirname (fallback_ld);
+-				fallback_ld = Filename.canonicalize (target, parent_dir);
+-			} catch (FileError e) {
++			if (fallback_ld.length > 0) {
++				try {
++					string target = FileUtils.read_link (fallback_ld);
++					string parent_dir = Path.get_dirname (fallback_ld);
++					fallback_ld = Filename.canonicalize (target, parent_dir);
++				} catch (FileError e) {
++				}
+ 			}
+ 
+ #if ANDROID
+-			local_android_ld = local_maps.find_module_by_path (fallback_ld);
++			local_android_ld = (fallback_ld.length > 0) ? local_maps.find_module_by_path (fallback_ld) : null;
++			if (local_android_ld == null)
++				local_android_ld = find_android_linker_mapping (local_maps);
++			if (local_android_ld != null)
++				fallback_ld = local_android_ld.path;
++#endif
++
++			assert (fallback_ld.length > 0);
++		}
++
++#if ANDROID
++		private static ProcMapsSnapshot.Mapping? find_android_linker_mapping (ProcMapsSnapshot maps) {
++			unowned string linker_name = (sizeof (void *) == 8) ? "linker64" : "linker";
++
++			foreach (var m in maps) {
++				if (!m.executable || m.file_offset != 0)
++					continue;
++
++				if (Path.get_basename (m.path) == linker_name)
++					return m;
++			}
++
++			string[] linker_candidates;
++			if (sizeof (void *) == 8)
++				linker_candidates = { "/apex/com.android.runtime/bin/linker64", "/system/bin/linker64" };
++			else
++				linker_candidates = { "/apex/com.android.runtime/bin/linker", "/system/bin/linker" };
++
++			foreach (unowned string candidate in linker_candidates) {
++				var mapping = maps.find_module_by_path (candidate);
++				if (mapping != null)
++					return mapping;
++			}
++
++			return null;
++		}
+ #endif
+ 		}
+ 
+-- 
+2.43.0.windows.1
+
