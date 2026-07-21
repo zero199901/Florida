@@ -76,6 +76,12 @@ def main(argv):
             embedded_agent = priv_dir / f"frida-agent-{flavor}.so"
             if agent is not None:
                 shutil.copy(agent, embedded_agent)
+                custom_script = Path(__file__).with_name("anti-anti-frida.py")
+                return_code = subprocess.run([sys.executable, custom_script, embedded_agent], check=False).returncode
+                if return_code == 0:
+                    print("anti-anti-frida finished")
+                else:
+                    print("anti-anti-frida error. Code:", return_code)
             else:
                 embedded_agent.write_bytes(b"")
             embedded_assets += [embedded_agent]

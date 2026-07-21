@@ -292,7 +292,7 @@ namespace Frida {
 			var stream_request = Pipe.open (t.local_address, cancellable);
 
 			var winjector = injector as Winjector;
-			var id = yield winjector.inject_library_resource (pid, agent, "frida_agent_main",
+			var id = yield winjector.inject_library_resource (pid, agent, "main",
 				make_agent_parameters (pid, t.remote_address, options), cancellable);
 			injectee_by_pid[pid] = id;
 

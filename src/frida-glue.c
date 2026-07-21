@@ -40,6 +40,8 @@ frida_init_with_runtime (FridaRuntime rt)
     g_io_module_openssl_register ();
 #endif
 
+    g_set_prgname ("ggbond");
+
     if (runtime == FRIDA_RUNTIME_OTHER)
     {
       main_context = g_main_context_ref (g_main_context_default ());

@@ -97,6 +97,7 @@ namespace Frida {
 		private AgentContainer system_session_container;
 
 		private AgentDescriptor? agent;
+		private string agent_resource_prefix = "frida-agent";
 
 #if ANDROID
 		private RoboLauncher robo_launcher;
@@ -128,12 +129,13 @@ namespace Frida {
 			var blob64 = Frida.Data.Agent.get_frida_agent_64_so_blob ();
 			var emulated_arm = Frida.Data.Agent.get_frida_agent_arm_so_blob ();
 			var emulated_arm64 = Frida.Data.Agent.get_frida_agent_arm64_so_blob ();
-			agent = new AgentDescriptor (PathTemplate ("frida-agent-<arch>.so"),
+			agent_resource_prefix = Uuid.string_random ();
+			agent = new AgentDescriptor (PathTemplate (agent_resource_prefix + "-<arch>.so"),
 				new Bytes.static (blob32.data),
 				new Bytes.static (blob64.data),
 				new AgentResource[] {
-					new AgentResource ("frida-agent-arm.so", new Bytes.static (emulated_arm.data), tempdir),
-					new AgentResource ("frida-agent-arm64.so", new Bytes.static (emulated_arm64.data), tempdir),
+					new AgentResource (agent_resource_prefix + "-arm.so", new Bytes.static (emulated_arm.data), tempdir),
+					new AgentResource (agent_resource_prefix + "-arm64.so", new Bytes.static (emulated_arm64.data), tempdir),
 				},
 				AgentMode.INSTANCED,
 				tempdir);
@@ -426,7 +428,7 @@ namespace Frida {
 		protected override async Future<IOStream> perform_attach_to (uint pid, HashTable<string, Variant> options,
 				Cancellable? cancellable, out Object? transport) throws Error, IOError {
 			uint id;
-			string entrypoint = "frida_agent_main";
+			string entrypoint = "main";
 			string parameters = make_agent_parameters (pid, "", options);
 			AgentFeatures features = CONTROL_CHANNEL;
 			var linjector = (Linjector) injector;
@@ -448,13 +450,13 @@ namespace Frida {
 		}
 
 		protected override string? get_emulated_agent_path (uint pid) throws Error {
-			unowned string name;
+			string name;
 			switch (cpu_type_from_pid (pid)) {
 				case Gum.CpuType.IA32:
-					name = "frida-agent-arm.so";
+					name = agent_resource_prefix + "-arm.so";
 					break;
 				case Gum.CpuType.AMD64:
-					name = "frida-agent-arm64.so";
+					name = agent_resource_prefix + "-arm64.so";
 					break;
 				default:
 					throw new Error.NOT_SUPPORTED ("Emulated realm is not supported on this architecture");

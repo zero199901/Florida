@@ -258,7 +258,7 @@ namespace Frida.InjectorTest {
 				var path = Frida.Test.Labrats.path_to_library (name, arch);
 				assert_true (FileUtils.test (path, FileTest.EXISTS));
 
-				yield injector.inject_library_file (process.id, path, "frida_agent_main", data);
+				yield injector.inject_library_file (process.id, path, "main", data);
 			} catch (GLib.Error e) {
 				printerr ("\nFAIL: %s\n\n", e.message);
 				assert_not_reached ();
