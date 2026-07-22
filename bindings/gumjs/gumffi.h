@@ -14,11 +14,10 @@
 
 G_BEGIN_DECLS
 
-typedef union _GumFFIValue GumFFIValue;
+typedef union _GumFFIArg GumFFIArg;
+typedef union _GumFFIArg GumFFIValue;
 
-#if G_BYTE_ORDER == G_LITTLE_ENDIAN
-
-union _GumFFIValue
+union _GumFFIArg
 {
   gpointer v_pointer;
   gint v_sint;
@@ -38,6 +37,10 @@ union _GumFFIValue
   gint64 v_sint64;
   guint64 v_uint64;
 };
+
+#if G_BYTE_ORDER == G_LITTLE_ENDIAN
+
+typedef union _GumFFIArg GumFFIRet;
 
 #else
 
@@ -70,7 +73,9 @@ union _GumFFIValue
 
 # pragma pack (push, 1)
 
-union _GumFFIValue
+typedef union _GumFFIRet GumFFIRet;
+
+union _GumFFIRet
 {
 # if GLIB_SIZEOF_VOID_P == 8
   /* Unpadded 64-bit types */
@@ -167,6 +172,8 @@ union _GumFFIValue
 extern ffi_type gum_ffi_type_size_t;
 extern ffi_type gum_ffi_type_ssize_t;
 
+G_GNUC_INTERNAL void gum_ffi_arg_to_ret (const ffi_type * type, GumFFIArg * arg,
+    GumFFIRet * ret);
 G_GNUC_INTERNAL gboolean gum_ffi_try_get_type_by_name (const gchar * name,
     ffi_type ** type);
 G_GNUC_INTERNAL gboolean gum_ffi_try_get_abi_by_name (const gchar * name,
