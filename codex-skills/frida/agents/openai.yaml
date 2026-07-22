@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frida Android 16.7.19"
+  short_description: "Build, deploy, and test hardened Android Frida"
+  default_prompt: "Use $frida to build, deploy, and test the hardened Frida 16.7.19 server on the configured Android phone."
