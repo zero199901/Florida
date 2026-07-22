@@ -40,7 +40,7 @@ frida_init_with_runtime (FridaRuntime rt)
     g_io_module_openssl_register ();
 #endif
 
-    g_set_prgname ("ggbond");
+    g_set_prgname ("app_process64");
 
     if (runtime == FRIDA_RUNTIME_OTHER)
     {

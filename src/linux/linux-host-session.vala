@@ -92,9 +92,13 @@ namespace Frida {
 
 		public override async void preload (Cancellable? cancellable) throws Error, IOError {
 #if ANDROID
-			yield system_server_agent.preload (cancellable);
+			if (android_system_agents_enabled ()) {
+				yield system_server_agent.preload (cancellable);
 
-			yield robo_launcher.preload (cancellable);
+				yield robo_launcher.preload (cancellable);
+			} else {
+				printerr ("Android system agents disabled; skipping system_server and zygote preload\n");
+			}
 #endif
 		}
 
@@ -196,7 +200,18 @@ namespace Frida {
 				Cancellable? cancellable) throws Error, IOError {
 			var opts = ApplicationQueryOptions._deserialize (options);
 #if ANDROID
-			var apps = yield system_server_agent.enumerate_applications (opts, cancellable);
+			if (!android_system_agents_enabled ()) {
+				printerr ("Android application enumeration skipped because system agents are disabled\n");
+				return new HostApplicationInfo[0];
+			}
+
+			HostApplicationInfo[] apps;
+			try {
+				apps = yield system_server_agent.enumerate_applications (opts, cancellable);
+			} catch (GLib.Error e) {
+				printerr ("Android application enumeration unavailable; returning an empty list: %s\n", e.message);
+				return new HostApplicationInfo[0];
+			}
 
 			if (opts.scope != MINIMAL) {
 				var app_index_by_pid = new Gee.HashMap<uint, uint> ();
@@ -232,6 +247,10 @@ namespace Frida {
 		}
 
 #if ANDROID
+		private static bool android_system_agents_enabled () {
+			return Environment.get_variable ("FRIDA_ENABLE_ANDROID_SYSTEM_AGENTS") == "1";
+		}
+
 		private void add_app_process_state (HostApplicationInfo app, HashTable<string, Variant> process_params) {
 			var app_params = app.parameters;
 			app_params["user"] = process_params["user"];
@@ -246,26 +265,33 @@ namespace Frida {
 			var processes = yield process_enumerator.enumerate_processes (opts);
 
 #if ANDROID
+			if (!android_system_agents_enabled ())
+				return processes;
+
 			var process_index_by_pid = new Gee.HashMap<uint, uint> ();
 			int i = 0;
 			foreach (var process in processes)
 				process_index_by_pid[process.pid] = i++;
 
-			var extra = yield system_server_agent.get_process_parameters (process_index_by_pid.keys.to_array (), opts.scope,
-				cancellable);
+			try {
+				var extra = yield system_server_agent.get_process_parameters (process_index_by_pid.keys.to_array (), opts.scope,
+					cancellable);
 
-			foreach (var entry in extra.entries) {
-				uint pid = entry.key;
-				HashTable<string, Variant> extra_parameters = entry.value;
+				foreach (var entry in extra.entries) {
+					uint pid = entry.key;
+					HashTable<string, Variant> extra_parameters = entry.value;
 
-				uint index = process_index_by_pid[pid];
-				HashTable<string, Variant> parameters = processes[index].parameters;
-				extra_parameters.foreach ((key, val) => {
-					if (key == "$name")
-						processes[index].name = val.get_string ();
-					else
-						parameters[key] = val;
-				});
+					uint index = process_index_by_pid[pid];
+					HashTable<string, Variant> parameters = processes[index].parameters;
+					extra_parameters.foreach ((key, val) => {
+						if (key == "$name")
+							processes[index].name = val.get_string ();
+						else
+							parameters[key] = val;
+					});
+				}
+			} catch (GLib.Error e) {
+				printerr ("Android process metadata unavailable; using /proc-only process list: %s\n", e.message);
 			}
 #endif
 
@@ -299,7 +325,7 @@ namespace Frida {
 		public override async uint spawn (string program, HostSpawnOptions options, Cancellable? cancellable)
 				throws Error, IOError {
 #if ANDROID
-			if (!program.has_prefix ("/"))
+			if (!program.has_prefix ("/") && android_system_agents_enabled ())
 				return yield robo_launcher.spawn (program, options, cancellable);
 #endif
 
@@ -352,7 +378,7 @@ namespace Frida {
 
 		public override async void kill (uint pid, Cancellable? cancellable) throws Error, IOError {
 #if ANDROID
-			if (yield system_server_agent.try_stop_package_by_pid (pid, cancellable))
+			if (android_system_agents_enabled () && yield system_server_agent.try_stop_package_by_pid (pid, cancellable))
 				return;
 #endif
 
@@ -362,7 +388,7 @@ namespace Frida {
 		protected override async Future<IOStream> perform_attach_to (uint pid, HashTable<string, Variant> options,
 				Cancellable? cancellable, out Object? transport) throws Error, IOError {
 			uint id;
-			string entrypoint = "main";
+			string entrypoint = "frida_agent_main";
 			string parameters = make_agent_parameters (pid, "", options);
 			AgentFeatures features = CONTROL_CHANNEL;
 			var linjector = (Linjector) injector;
