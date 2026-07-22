@@ -53,3 +53,19 @@ Article-style checkpoints:
 2. Observe linker `call_constructors` timing for module/thread changes.
 3. Hook/observe `pthread_create` and map thread entry addresses to modules.
 4. Enumerate loaded `.so` modules and `/proc` surfaces after injection.
+
+## Android 16 Java bridge control surface
+
+The current Gum patch keeps Android API 36 Java bridge gated and adds per-process files. `com.chunqiunativecheck` is native-only by default so its JNI/native detection flow can be traced without loading `frida-java-bridge`.
+
+Control files:
+
+```text
+/data/local/tmp/frida-java-bridge-deny.d/<process-name>
+/data/local/tmp/frida-java-bridge-allow.d/<process-name>
+/data/local/tmp/frida-java-bridge-force.d/<process-name>
+/data/local/tmp/frida-enable-java-bridge
+/data/local/tmp/.frida-enable-java-bridge
+```
+
+Resolution order on Android API 36+: explicit disable/deny, explicit force, built-in denylist, per-process allow, legacy global opt-in.
