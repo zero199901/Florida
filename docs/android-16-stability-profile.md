@@ -210,3 +210,27 @@ Top：
 - `docs/android-16-stability-profile.md`
 - `subprojects/frida-core` submodule pointer
 - `subprojects/frida-gum` submodule pointer
+
+## Java bridge per-process controls
+
+`frida-gum` commit `a6aec223` adds Android API 36 per-process Java bridge controls. This keeps `com.chunqiunativecheck` native-only by default while allowing other packages to opt in.
+
+Stable Native Check setup:
+
+```bash
+adb -s 5c8093e4 shell su -c 'unlink /data/local/tmp/frida-enable-java-bridge 2>/dev/null; unlink /data/local/tmp/.frida-enable-java-bridge 2>/dev/null; mkdir -p /data/local/tmp/frida-java-bridge-deny.d; touch /data/local/tmp/frida-java-bridge-deny.d/com.chunqiunativecheck; true'
+```
+
+Per-package opt-in example:
+
+```bash
+PKG=com.example.target
+adb -s 5c8093e4 shell su -c "mkdir -p /data/local/tmp/frida-java-bridge-allow.d; touch /data/local/tmp/frida-java-bridge-allow.d/$PKG"
+```
+
+Force test example:
+
+```bash
+PKG=com.chunqiunativecheck
+adb -s 5c8093e4 shell su -c "mkdir -p /data/local/tmp/frida-java-bridge-force.d; touch /data/local/tmp/frida-java-bridge-force.d/$PKG"
+```

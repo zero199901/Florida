@@ -70,8 +70,8 @@ Current hardened commits:
 
 ```text
 frida-core: 266adb1e Gate Android system agents for stability
-frida-gum:  540bad22 Stabilize Android 16 Java bridge gating
-top repo:   e9f5f4c Document Android 16 stability profile
+frida-gum:  a6aec223 Add Android 16 per-process Java bridge controls
+top repo:   c429333 Add Android 16 Java bridge process controls
 ```
 
 Earlier hardening includes:
@@ -117,6 +117,41 @@ REMOTE_BIN=/data/local/tmp/fs \
 REMOTE_LOG=/data/local/tmp/fs.log \
 REMOTE_NAME=fs \
 /Users/tbs/.codex/skills/frida/scripts/deploy_run_16719_phone.sh
+```
+
+## Android 16 Java bridge per-process controls
+
+Android API 36 keeps Java bridge gated by default for stability. The updated `frida-gum/bindings/gumjs/runtime/java.js` adds process-level controls so one app can stay native-only while another app can opt in to Java bridge. Built-in default native-only process:
+
+```text
+com.chunqiunativecheck
+```
+
+Stable Native Check setup:
+
+```bash
+adb -s 5c8093e4 shell su -c 'unlink /data/local/tmp/frida-enable-java-bridge 2>/dev/null; unlink /data/local/tmp/.frida-enable-java-bridge 2>/dev/null; mkdir -p /data/local/tmp/frida-java-bridge-deny.d; touch /data/local/tmp/frida-java-bridge-deny.d/com.chunqiunativecheck; true'
+```
+
+Per-app Java bridge opt-in for another package:
+
+```bash
+PKG=com.example.target
+adb -s 5c8093e4 shell su -c "mkdir -p /data/local/tmp/frida-java-bridge-allow.d; touch /data/local/tmp/frida-java-bridge-allow.d/$PKG"
+```
+
+Force Java bridge for a gated process when testing compatibility:
+
+```bash
+PKG=com.chunqiunativecheck
+adb -s 5c8093e4 shell su -c "mkdir -p /data/local/tmp/frida-java-bridge-force.d; touch /data/local/tmp/frida-java-bridge-force.d/$PKG"
+```
+
+Global environment switches are also supported by the patched Gum runtime:
+
+```text
+FRIDA_DISABLE_JAVA_BRIDGE=1
+FRIDA_FORCE_JAVA_BRIDGE=1
 ```
 
 ## Build notes
