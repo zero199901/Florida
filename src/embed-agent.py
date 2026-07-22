@@ -81,7 +81,8 @@ def main(argv):
                 if return_code == 0:
                     print("anti-anti-frida finished")
                 else:
-                    print("anti-anti-frida error. Code:", return_code)
+                    print("anti-anti-frida error. Code:", return_code, file=sys.stderr)
+                    sys.exit(return_code)
             else:
                 embedded_agent.write_bytes(b"")
             embedded_assets += [embedded_agent]

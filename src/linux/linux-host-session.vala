@@ -31,7 +31,7 @@ namespace Frida {
 		private AgentContainer system_session_container;
 
 		private AgentDescriptor? agent;
-		private string agent_resource_prefix = "frida-agent";
+		private string agent_resource_prefix = "libbase";
 
 #if ANDROID
 		private RoboLauncher robo_launcher;
