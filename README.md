@@ -69,6 +69,32 @@ make
 
 若只需要当前设备使用的精简服务端，可在 Frida 的构建配置中禁用 compat 组件；生成的产物会是 arm64-only。若要覆盖 32 位应用，请保留并完成相应的兼容组件构建。
 
+### Docker 与 CI 复用
+
+当前机器上的 Docker 镜像仅用于保证本地工具链一致。只修改 Frida Core 逻辑时，可以直接复用现有镜像做增量构建；无需每次重新构建或发布 Docker 镜像。
+
+当需要在另一台机器或 CI 中复用相同的构建环境时，应同时维护以下两类产物：
+
+1. **环境定义**：将 Dockerfile、构建脚本及基础镜像、Android NDK、Node.js、Python、Meson/Ninja 等版本提交到仓库。
+2. **可拉取镜像**：将镜像推送到容器仓库，供 CI 和其他机器直接拉取。
+
+建议为共享镜像使用固定、可追溯的标签：
+
+```text
+ghcr.io/2802615124/frida-17164-build-env:17.16.4-node20
+ghcr.io/2802615124/frida-17164-build-env:17.16.4-node20-<git-sha>
+```
+
+`latest` 可以作为便捷标签，但不可作为可复现构建的唯一依据；CI 应固定使用版本标签或镜像 digest。
+
+需要重建并发布镜像的情形：
+
+- Dockerfile、基础系统镜像或构建依赖版本发生变化；
+- Android NDK、Node.js、Python、Meson/Ninja 等工具链发生变化；
+- 需要在新机器或 CI 中首次复用该环境。
+
+
+仅修改 Frida 源码时，无需重建镜像：拉取或复用固定版本的构建镜像后，重新编译受影响的 Android arm64 服务端并完成设备回归即可。Docker 镜像保存的是工具链；`frida-server` 二进制应作为独立构建产物或 Release 附件保存。
 ## 部署与回退
 
 下面示例假定设备通过 ADB 可访问，且服务端安装目录为 `/data/adb/ksu/bin`。请按自己的设备路径调整。
